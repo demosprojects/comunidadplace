@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emprendedor | Comunidad Place</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="shortcut icon" href="foco-nuevo-rem.png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        html, body { overflow-x: hidden; max-width: 100%; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @media (max-width: 767px) {
+            #buscador-emprendedor { font-size: 16px !important; }
+        }
+
+        #modal-producto-overlay {
+            background: rgba(0,0,0,0.8);
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .25s ease;
+        }
+        #modal-producto-overlay.abierto { opacity: 1; pointer-events: auto; }
+
+        #modal-producto {
+            left: 0; right: 0; bottom: 0;
+            background: #fff;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -12px 40px rgba(0,0,0,0.2);
+            max-height: 92vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(100%);
+            transition: transform .3s ease, opacity .25s ease, visibility 0s linear .3s;
+            pointer-events: none;
+        }
+        #modal-producto.abierto {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
+            transition: transform .3s ease, opacity .25s ease, visibility 0s linear 0s;
+        }
+
+        @media (min-width: 640px) {
+            #modal-producto {
+                left: 50%; right: auto; bottom: auto; top: 50%;
+                width: 92%; max-width: 780px; max-height: 88vh;
+                border-radius: 24px;
+                transform: translate(-50%, -48%) scale(0.96);
+                box-shadow: 0 24px 64px rgba(0,0,0,0.28);
+            }
+            #modal-producto.abierto { transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-white text-black overflow-x-hidden">
+
+    <!-- NAV / HEADER (Sin cambios) -->
+    <nav class="bg-black/95 backdrop-blur-md text-white sticky top-0 z-50 border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+        <div class="container mx-auto px-4 sm:px-6 py-3 sm:py-3.5 flex items-center gap-x-4 sm:gap-x-6 justify-between">
+            <a href="index.html" class="text-base sm:text-xl font-900 tracking-wide sm:tracking-widest uppercase cursor-pointer flex-shrink-0 select-none hover:opacity-80 transition-opacity active:scale-95">
+                <span class="bg-yellow-400 text-black px-1.5 sm:px-2 mr-1 inline-block -skew-x-6 rounded-[3px]">COMUNIDAD</span><span class="inline-block">PLACE</span>
+            </a>
+            <div class="flex items-center gap-1 font-bold text-xs uppercase tracking-widest flex-shrink-0">
+                <a href="index.html" class="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/10 hover:text-yellow-400 transition-all active:scale-95">
+                    <span class="text-base leading-none">←</span><span class="hidden sm:inline">Volver al inicio</span>
+                </a>
+                <button onclick="abrirCarrito()" class="relative flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/10 hover:text-yellow-400 transition-all active:scale-95">
+                    <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 002 1.65h8.4a2 2 0 002-1.65L20 7.5H6" />
+                        <circle cx="9.5" cy="19.5" r="1.4" fill="currentColor" stroke="none"/>
+                        <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" stroke="none"/>
+                    </svg>
+                    <span class="hidden sm:inline">Carrito</span>
+                    <span id="badge-carrito" class="hidden absolute top-0.5 right-0.5 bg-yellow-400 text-black text-[10px] font-black rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         CABECERA DE PERFIL REDISEÑADA (ESTILO MODERNO & PROFESIONAL)
+    ════════════════════════════════════════════════════════════════ -->
+    <section class="relative bg-[#FBFBF9] border-b border-gray-200/60 pb-10 sm:pb-14">
+        <!-- Banner de portada moderno -->
+        <div id="perfil-banner-wrap" class="hidden relative w-full h-52 sm:h-64 md:h-72 overflow-hidden bg-zinc-900">
+            <img id="perfil-banner" src="" alt="" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+        </div>
+
+        <!-- Patrón elegante si no hay banner cargado -->
+        <div id="perfil-fondo-patron" class="w-full h-44 sm:h-56 md:h-64 bg-gradient-to-b from-zinc-100/80 to-[#FBFBF9] relative overflow-hidden border-b border-gray-200/40"
+             style="background-image: radial-gradient(circle, #d4d4d8 1.5px, transparent 1.5px); background-size: 28px 28px;">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#FBFBF9] via-transparent to-transparent"></div>
+        </div>
+
+        <!-- Contenedor Principal del Emprendedor -->
+        <div class="container mx-auto px-4 sm:px-6 max-w-6xl">
+
+            <!-- Estado: Cargando -->
+            <div id="perfil-cargando" class="text-center py-14">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white shadow-sm border border-gray-200/80 text-gray-500 font-bold uppercase text-xs tracking-widest animate-pulse">
+                    <svg class="w-3.5 h-3.5 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.36-6.36l-2.12 2.12M8.76 15.24l-2.12 2.12m0-10.72l2.12 2.12m8.48 8.48l2.12 2.12"/>
+                    </svg>
+                    Cargando tienda del emprendedor...
+                </div>
+            </div>
+
+            <!-- Estado: Error / No encontrado -->
+            <div id="perfil-error" class="hidden text-center py-16">
+                <svg class="w-12 h-12 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                    <circle cx="10.5" cy="10.5" r="6.5"/>
+                    <path stroke-linecap="round" d="M20 20l-4.8-4.8"/>
+                </svg>
+                <h1 class="text-2xl sm:text-3xl font-900 uppercase italic mt-4">No encontramos este emprendedor</h1>
+                <p class="text-gray-500 mt-2 text-sm sm:text-base">Puede que el link esté roto o la tienda ya no se encuentre activa en la comunidad.</p>
+                <a href="index.html" class="inline-block mt-6 bg-black text-white px-8 py-4 rounded-full font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl">
+                    Volver al catálogo general
+                </a>
+            </div>
+
+            <!-- Tarjeta y Datos del Emprendedor -->
+            <div id="perfil-contenido" class="hidden relative -mt-20 sm:-mt-24 md:-mt-28 z-10">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
+                    
+                    <!-- Avatar superpuesto + Identidad -->
+                    <div class="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
+                        <div class="relative group">
+                            <img id="perfil-logo" src="" alt="Logo" class="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-3xl object-cover border-4 border-white bg-white shadow-2xl flex-shrink-0 hidden">
+                            <div id="perfil-logo-placeholder" class="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-3xl bg-black text-white border-4 border-white shadow-2xl flex items-center justify-center text-4xl sm:text-5xl font-900 flex-shrink-0 hidden">?</div>
+                            <span class="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full border-2 border-white shadow flex items-center justify-center text-[10px]" title="Emprendedor Verificado">✓</span>
+                        </div>
+
+                        <div class="pb-1">
+                            <div class="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-gray-200/80 shadow-sm text-yellow-600 font-bold tracking-widest uppercase text-[10px] sm:text-xs">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                                </span>
+                                Emprendedor de la Comunidad
+                            </div>
+                            <h1 id="perfil-nombre" class="text-3xl sm:text-4xl md:text-5xl font-900 uppercase italic tracking-tight leading-none mt-2.5 text-zinc-900">Nombre de la tienda</h1>
+                        </div>
+                    </div>
+
+                    <!-- Botón de Contacto y Redes (Derecha) -->
+                    <div class="flex flex-wrap items-center justify-center sm:justify-start md:justify-end gap-3 pb-1">
+                        <a id="perfil-whatsapp" href="#" target="_blank" class="inline-flex items-center justify-center gap-2.5 bg-black text-white px-7 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-black/10 hover:bg-yellow-400 hover:text-black hover:shadow-yellow-400/20 transition-all active:scale-95">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 .075C5.41.075.043 5.44.043 12.03c0 2.106.55 4.16 1.595 5.975L.055 23.935l6.104-1.602a11.89 11.89 0 0 0 5.841 1.523h.005c6.59 0 11.956-5.368 11.956-11.96 0-3.195-1.245-6.199-3.504-8.458C18.198 1.18 15.195.075 12 .075zm6.85 17.034c-.29.816-1.684 1.562-2.316 1.637-.597.07-1.37.102-4.417-1.159-3.9-1.614-6.423-5.59-6.618-5.852-.194-.26-1.574-2.096-1.574-3.996 0-1.9 1.001-2.836 1.356-3.228.355-.392.775-.49 1.034-.49.258 0 .517.003.743.014.24.011.562-.091.879.673.323.778 1.1 2.686 1.196 2.882.097.196.162.424.032.685-.13.26-.194.424-.388.653-.194.228-.407.51-.582.685-.194.196-.401.408-.175.799.226.392 1.006 1.666 2.163 2.696 1.488 1.326 2.744 1.736 3.133 1.932.388.196.614.163.84-.098.226-.26.97-1.127 1.228-1.518.258-.392.517-.326.873-.196.355.13 2.261 1.068 2.649 1.264.388.196.647.294.743.457.097.163.097.947-.193 1.763z"/></svg>
+                            Contactar por WhatsApp
+                        </a>
+
+                        <!-- Botones de Redes Sociales Modernos -->
+                        <div class="flex items-center gap-2">
+                            <a id="perfil-instagram" href="#" target="_blank" title="Instagram" class="hidden w-12 h-12 border border-gray-200/80 bg-white/90 backdrop-blur rounded-2xl items-center justify-center text-xs font-black uppercase shadow-sm hover:bg-black hover:text-white hover:border-black transition-all active:scale-95">IG</a>
+                            <a id="perfil-facebook" href="#" target="_blank" title="Facebook" class="hidden w-12 h-12 border border-gray-200/80 bg-white/90 backdrop-blur rounded-2xl items-center justify-center text-xs font-black uppercase shadow-sm hover:bg-black hover:text-white hover:border-black transition-all active:scale-95">FB</a>
+                            <a id="perfil-tiktok" href="#" target="_blank" title="TikTok" class="hidden w-12 h-12 border border-gray-200/80 bg-white/90 backdrop-blur rounded-2xl items-center justify-center text-xs font-black uppercase shadow-sm hover:bg-black hover:text-white hover:border-black transition-all active:scale-95">TK</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Línea Divisoria -->
+                <div class="my-6 border-t border-gray-200/60"></div>
+
+                <!-- Descripción (Bio) y Metadata de Ubicación/Horarios -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <p id="perfil-bio" class="text-gray-600 text-sm sm:text-base max-w-3xl leading-relaxed font-normal">Bio...</p>
+
+                    <!-- Pills informativos: 2 por fila en mobile (sin scroll), en línea en desktop -->
+                    <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5">
+                        <div id="perfil-ubicacion-wrap" class="hidden items-center justify-center gap-2 bg-white border border-gray-200/80 px-3 sm:px-4 py-2 rounded-full shadow-sm text-xs font-semibold text-gray-700 text-center">
+                            <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
+                                <circle cx="12" cy="11" r="2.5"/>
+                            </svg>
+                            <span id="perfil-ubicacion" class="truncate"></span>
+                            <a id="perfil-mapa" href="#" target="_blank" class="hidden text-yellow-600 font-black uppercase tracking-widest hover:underline ml-1 flex-shrink-0">Ver mapa</a>
+                        </div>
+                        <div id="perfil-horario-wrap" class="hidden items-center justify-center gap-2 bg-white border border-gray-200/80 px-3 sm:px-4 py-2 rounded-full shadow-sm text-xs font-semibold text-gray-700 text-center">
+                            <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="9"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3.5 2"/>
+                            </svg>
+                            <span id="perfil-horario" class="truncate"></span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Barra separadora amarilla -->
+    <div class="h-1.5 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 w-full relative z-10 shadow-sm"></div>
+
+    <!-- SECCIÓN PRODUCTOS (Sin cambios en tu estructura) -->
+    <main id="seccion-productos" class="hidden container mx-auto px-4 sm:px-6 py-10 sm:py-16 max-w-7xl">
+        <div class="mb-10">
+            <div class="flex flex-wrap items-end justify-between gap-3 sm:gap-4 mb-5 sm:mb-7">
+                <div>
+                    <span class="text-yellow-600 font-bold tracking-widest uppercase text-[10px] sm:text-xs">Catálogo</span>
+                    <h2 class="text-2xl sm:text-3xl md:text-4xl font-900 uppercase italic mt-1 leading-none text-zinc-900">Sus productos</h2>
+                </div>
+            </div>
+
+            <div class="relative max-w-md">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                </svg>
+                <input type="text" id="buscador-emprendedor" placeholder="Buscar en sus productos..."
+                    class="w-full bg-gray-50 border-2 border-gray-200 rounded-full py-2.5 pl-11 pr-5 text-sm focus:outline-none focus:border-yellow-400 focus:bg-white transition-all placeholder:text-gray-400">
+            </div>
+        </div>
+
+        <div id="contenedor-productos" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-8"></div>
+    </main>
+
+    <!-- MODAL DE DETALLE DE PRODUCTO (Sin cambios) -->
+    <div id="modal-producto-overlay" class="fixed inset-0 z-[60]" onclick="cerrarModal()"></div>
+    <div id="modal-producto" class="fixed z-[61]">
+        <div class="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+            <span class="w-10 h-1.5 rounded-full bg-gray-300"></span>
+        </div>
+
+        <button onclick="cerrarModal()" class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur border border-gray-200 shadow flex items-center justify-center text-gray-500 hover:text-black transition-colors" aria-label="Cerrar">✕</button>
+
+        <div class="overflow-y-auto flex-1 sm:grid sm:grid-cols-2">
+            <div class="aspect-[16/9] sm:aspect-square bg-gray-100 flex-shrink-0 flex items-center justify-center">
+                <img id="modal-img" src="" alt="" class="w-full h-full object-contain p-5 sm:p-8">
+            </div>
+            <div class="p-5 sm:p-7 flex flex-col sm:justify-center">
+                <span id="modal-tienda" class="text-yellow-500 font-black uppercase text-xs tracking-widest">TIENDA</span>
+                <h2 id="modal-nombre" class="text-2xl sm:text-3xl font-900 uppercase leading-tight mt-1.5 italic">Nombre</h2>
+                <p id="modal-precio" class="text-xl sm:text-2xl font-black mt-3">$0.00</p>
+
+                <div id="modal-variantes" class="mt-4 space-y-3"></div>
+
+                <div class="mt-5 border-t border-gray-100 pt-4">
+                    <p class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest">Sobre el producto</p>
+                    <p id="modal-desc" class="text-gray-600 leading-relaxed text-sm">Descripción...</p>
+                </div>
+
+                <div class="pt-6">
+                    <div class="flex items-center justify-between gap-4 mb-4">
+                        <span class="text-[10px] font-black uppercase text-gray-400 tracking-widest">Cantidad</span>
+                        <div class="flex items-center gap-3 bg-gray-100 rounded-full px-2 py-1">
+                            <button onclick="modificarCantidadModal(-1)" class="w-8 h-8 rounded-full bg-white shadow font-black text-lg leading-none hover:bg-yellow-400 transition-all active:scale-90">−</button>
+                            <span id="modal-cantidad" class="font-black w-6 text-center">1</span>
+                            <button onclick="modificarCantidadModal(1)" class="w-8 h-8 rounded-full bg-white shadow font-black text-lg leading-none hover:bg-yellow-400 transition-all active:scale-90">+</button>
+                        </div>
+                    </div>
+                    <button onclick="agregarAlCarrito()" class="inline-flex items-center justify-center gap-3 bg-black text-white w-full py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+                        Agregar al carrito
+                    </button>
+                    <a id="modal-whatsapp" href="#" target="_blank" class="mt-3 inline-flex items-center justify-center gap-1.5 w-full text-center text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
+                        o consultá directo por WhatsApp →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DRAWER CARRITO (Sin cambios) -->
+    <div id="carrito-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[80] hidden" onclick="cerrarCarrito()"></div>
+    <div id="carrito-drawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[90] shadow-2xl translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex-shrink-0">
+            <div>
+                <h2 class="text-xl font-900 uppercase italic leading-none">Tu carrito</h2>
+                <p id="carrito-subtitulo" class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Vacío</p>
+            </div>
+            <button onclick="cerrarCarrito()" class="text-gray-400 hover:text-black font-bold uppercase text-xs tracking-widest transition-colors">Cerrar ✕</button>
+        </div>
+
+        <div id="carrito-items" class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4"></div>
+
+        <div class="border-t border-gray-100 px-4 sm:px-6 py-5 flex-shrink-0">
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Total</span>
+                <span id="carrito-total" class="text-2xl font-900">$0.00</span>
+            </div>
+            <button id="carrito-whatsapp-btn" onclick="enviarPedidoWhatsapp()" class="inline-flex items-center justify-center gap-3 bg-black text-white w-full py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+                Enviar pedido por WhatsApp
+            </button>
+            <button onclick="vaciarCarrito()" class="w-full mt-3 text-center text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
+                Vaciar carrito
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL CONFLICTO CARRITO (Sin cambios) -->
+    <div id="modal-conflicto-carrito" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="cerrarConflictoCarrito()"></div>
+        <div class="bg-white w-full max-w-sm rounded-3xl relative z-10 p-6 sm:p-8 shadow-2xl animate-fade-in text-center">
+            <span class="text-4xl">🛒</span>
+            <h3 class="text-xl font-900 uppercase italic mt-4 leading-tight">Un emprendedor<br>por carrito</h3>
+            <p class="text-gray-500 text-sm leading-relaxed mt-3">
+                Tu carrito ya tiene productos de <strong id="conflicto-tienda-actual" class="text-black">otra tienda</strong>. Para pedirle a otro emprendedor termina tu compra actual.
+            </p>
+            <div class="mt-7 flex flex-col gap-3">
+                <button onclick="confirmarReemplazoCarrito()" class="w-full bg-black text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+                    Vaciar carrito y agregar este
+                </button>
+                <button onclick="cerrarConflictoCarrito()" class="w-full border-2 border-black py-3.5 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-gray-50 transition-all active:scale-95">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST (Sin cambios) -->
+    <div id="toast-carrito" class="fixed bottom-6 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 mx-auto max-w-sm sm:max-w-md w-fit bg-black text-white px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl sm:rounded-full font-bold text-xs sm:text-sm uppercase tracking-widest shadow-2xl z-[110] hidden items-center justify-center text-center gap-2">
+        <span class="text-yellow-400 flex-shrink-0">✓</span> <span id="toast-carrito-texto" class="leading-snug">Agregado al carrito</span>
+    </div>
+
+    <!-- FOOTER (igual al del resto del sitio) -->
+    <footer class="bg-black text-white px-4 sm:px-6 mt-12 sm:mt-20">
+
+    <!-- CTA superior -->
+    <div class="border-b border-zinc-800 py-8 sm:py-12">
+        <div class="container mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+            <div>
+                <p class="text-yellow-400 text-[10px] font-black uppercase tracking-widest mb-1">¿Tenés algo para vender?</p>
+                <h3 class="text-2xl sm:text-3xl font-black uppercase italic leading-tight">TU TIENDA,<br>TU CIUDAD.</h3>
+            </div>
+            <a href="login.html" class="flex-shrink-0 bg-yellow-400 text-black font-black uppercase tracking-widest px-6 sm:px-8 py-3.5 sm:py-4 rounded-full hover:bg-white transition-all active:scale-95 text-sm">
+                Empezar a vender →
+            </a>
+        </div>
+    </div>
+
+    <!-- Cuerpo del footer -->
+    <div class="container mx-auto py-10 sm:py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 sm:gap-10 border-b border-zinc-800 text-center sm:text-left">
+
+        <!-- Col 1: Logo + descripción + redes -->
+        <div>
+            <div class="text-2xl font-black tracking-widest uppercase mb-4">
+                <span class="bg-yellow-400 text-black px-2 mr-1">COMUNIDAD</span>PLACE
+            </div>
+            <p class="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto sm:mx-0">
+                El marketplace de los emprendedores de tu ciudad. Comprá local, apoyá a quienes crean con sus manos.
+            </p>
+            <div class="flex justify-center sm:justify-start gap-4 mt-6">
+                <a href="#" class="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-400 transition-all text-xs font-black">IG</a>
+                <a href="#" class="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-400 transition-all text-xs font-black">WA</a>
+                <a href="#" class="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-400 transition-all text-xs font-black">TK</a>
+            </div>
+        </div>
+
+        <!-- Col 2: Explorar -->
+        <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-5">Explorar</p>
+            <ul class="space-y-3">
+                <li><a href="#contenedor-productos" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Productos de esta tienda</a></li>
+                <li><a href="index.html#emprendedores-fila" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Todos los emprendedores</a></li>
+                <li><a href="index.html#filtros-container" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Categorías</a></li>
+            </ul>
+        </div>
+
+        <!-- Col 3: Tu cuenta -->
+        <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-5">Tu cuenta</p>
+            <ul class="space-y-3">
+                <li><a href="login.html" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Vender en Comunidad Place</a></li>
+                <li><a href="javascript:void(0)" onclick="abrirCarrito()" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Ver carrito</a></li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- Barra inferior -->
+    <div class="container mx-auto py-6 flex flex-col md:flex-row items-center justify-center gap-3">
+        <p class="text-zinc-600 text-[10px] tracking-widest uppercase font-bold italic text-center">Diseñado y desarrollado por Hostara · © 2026 - Todos los derechos reservados.</p>
+    </div>
+
+</footer>
+
+    <script src="supabase-client.js"></script>
+    <script src="emprendedor.js"></script>
+</body>
+</html>
