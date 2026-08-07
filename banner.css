@@ -1,0 +1,314 @@
+/* ══════════════════════════════════════════════════════════
+   BANNER / HERO — Comunidad Place
+   CSS extraído de las clases de Tailwind usadas en la sección
+   <section class="relative overflow-hidden bg-[#FAFAF8]">...</section>
+   más la franja amarilla que va justo debajo.
+
+   CÓMO USARLO:
+   1) Agregá <link rel="stylesheet" href="banner.css"> en el <head>,
+      DESPUÉS del <script src="https://cdn.tailwindcss.com">.
+   2) En el HTML, agregá la clase indicada en el comentario de cada
+      bloque de abajo al elemento correspondiente (podés dejar las
+      clases de Tailwind que ya tiene, no rompen nada, pero si querés
+      sacar la dependencia del banner del CDN podés borrarlas).
+   ══════════════════════════════════════════════════════════ */
+
+/* <section class="relative overflow-hidden bg-[#FAFAF8]"> → cp-hero */
+.cp-hero {
+    position: relative;
+    overflow: hidden;
+    background-color: #FAFAF8;
+}
+
+/* Parche anti-glitch WebKit: fuerza capa GPU propia en toda la sección
+   (mismo principio que .gpu-fix que ya usás en la imagen) */
+.cp-hero,
+.cp-hero * {
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+
+/* div punteado de fondo → cp-hero__dots */
+.cp-hero__dots {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image: radial-gradient(circle, #d4d4d8 1.5px, transparent 1.5px);
+    background-size: 28px 28px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 30% 20%, black 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 60% at 30% 20%, black 40%, transparent 100%);
+}
+
+/* blur amarillo de fondo → cp-hero__glow */
+.cp-hero__glow {
+    position: absolute;
+    top: -6rem;
+    right: -6rem;
+    width: 24rem;
+    height: 24rem;
+    background-color: rgba(250, 204, 21, 0.2); /* yellow-400/20 */
+    border-radius: 9999px;
+    filter: blur(64px);
+    pointer-events: none;
+}
+
+/* contenedor grid del banner → cp-hero__grid */
+.cp-hero__grid {
+    position: relative;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: center;
+    gap: 2.5rem;
+    padding: 3rem 1rem;
+}
+@media (min-width: 640px) {
+    .cp-hero__grid { gap: 4rem; padding: 5rem 1.5rem; max-width: 640px; }
+}
+@media (min-width: 768px) {
+    .cp-hero__grid { grid-template-columns: 1fr 1fr; max-width: 768px; padding-top: 7rem; padding-bottom: 7rem; }
+}
+@media (min-width: 1024px) { .cp-hero__grid { max-width: 1024px; } }
+@media (min-width: 1280px) { .cp-hero__grid { max-width: 1280px; } }
+@media (min-width: 1536px) { .cp-hero__grid { max-width: 1536px; } }
+
+/* ── Columna de texto ─────────────────────────────────── */
+
+/* div class="relative z-10 animate-fade-in" → cp-hero__text */
+.cp-hero__text {
+    position: relative;
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: cp-fadeIn 0.5s ease-out forwards;
+    /* "both" asegura que, si el navegador restaura la página desde
+       bfcache sin re-disparar la animación, el elemento se quede
+       visible en el estado final en vez de pisado en opacity:0 */
+    animation-fill-mode: both;
+}
+@keyframes cp-fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* span "Comunidad emprendedora" → cp-hero__badge */
+.cp-hero__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #ca8a04; /* yellow-600 */
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    line-height: 1rem;
+}
+
+/* wrapper del punto animado → cp-hero__ping-wrap */
+.cp-hero__ping-wrap {
+    position: relative;
+    display: flex;
+    height: 0.5rem;
+    width: 0.5rem;
+}
+/* punto que "pinga" → cp-hero__ping */
+.cp-hero__ping {
+    position: absolute;
+    display: inline-flex;
+    height: 100%;
+    width: 100%;
+    border-radius: 9999px;
+    background-color: #facc15; /* yellow-400 */
+    opacity: 0.75;
+    animation: cp-ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+@keyframes cp-ping {
+    75%, 100% { transform: scale(2); opacity: 0; }
+}
+/* punto fijo detrás del ping → cp-hero__dot */
+.cp-hero__dot {
+    position: relative;
+    display: inline-flex;
+    border-radius: 9999px;
+    height: 0.5rem;
+    width: 0.5rem;
+    background-color: #eab308; /* yellow-500 */
+}
+
+/* h1 título → cp-hero__title */
+.cp-hero__title {
+    font-size: 2.25rem;
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+    margin-top: 1.25rem;
+    line-height: 0.95;
+}
+@media (min-width: 640px)  { .cp-hero__title { font-size: 3rem; } }
+@media (min-width: 768px)  { .cp-hero__title { font-size: 3.75rem; } }
+@media (min-width: 1024px) { .cp-hero__title { font-size: 4.5rem; } }
+
+/* span negro dentro del h1 → cp-hero__title-highlight */
+.cp-hero__title-highlight {
+    background-color: #000;
+    color: #fff;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    display: inline-block;
+    transform: skewX(-3deg);
+}
+
+/* p descripción → cp-hero__desc */
+.cp-hero__desc {
+    color: #6b7280; /* gray-500 */
+    margin-top: 1.5rem;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    max-width: 28rem;
+}
+
+/* div de botones → cp-hero__actions */
+.cp-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2.25rem;
+}
+
+/* botón "Explorar productos" (a) → cp-hero__btn cp-hero__btn--primary */
+.cp-hero__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    border-radius: 9999px;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    transition: all 150ms ease;
+    /* fuerza su propia capa de composición (igual que .gpu-fix):
+       sin will-change, el backface-visibility:hidden heredado
+       no alcanza a evitar que WebKit pierda la capa y deje
+       el botón sin pintar tras el glitch de scroll por ancla */
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+.cp-hero__btn:active { transform: scale(0.95); }
+
+.cp-hero__btn--primary {
+    background-color: #000;
+    color: #fff;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+.cp-hero__btn--primary:hover { background-color: #facc15; color: #000; }
+
+.cp-hero__btn--secondary {
+    background-color: transparent;
+    color: #000;
+    border: 2px solid #000;
+}
+.cp-hero__btn--secondary:hover { background-color: #000; color: #fff; }
+
+/* flecha dentro del botón primario → cp-hero__btn-arrow */
+.cp-hero__btn-arrow {
+    transition: transform 150ms ease;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+.cp-hero__btn--primary:hover .cp-hero__btn-arrow { transform: translateX(0.25rem); }
+
+/* ── Columna de imagen (desktop) ──────────────────────── */
+
+/* div contenedor de imagen → cp-hero__media */
+.cp-hero__media {
+    display: none;
+    position: relative;
+    z-index: 10;
+    height: 24rem;
+}
+@media (min-width: 768px) { .cp-hero__media { display: block; } }
+
+/* img del foco/icono → cp-hero__foco */
+.cp-hero__foco {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10rem;
+    height: auto;
+    transform: rotate(6deg);
+    filter: drop-shadow(0 25px 25px rgb(0 0 0 / 0.15));
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+@media (min-width: 1024px) { .cp-hero__foco { width: 12rem; } }
+
+/* div marco de la foto principal → cp-hero__frame */
+.cp-hero__frame {
+    position: absolute;
+    top: 2rem;
+    left: 0;
+    width: 100%;
+    max-width: 24rem;
+    height: 18rem;
+    border-radius: 1.5rem;
+    transform: rotate(-3deg);
+    border: 4px solid #000;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    overflow: hidden;
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+.cp-hero__frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* tarjetita de rating → cp-hero__rating */
+.cp-hero__rating {
+    position: absolute;
+    bottom: -0.5rem;
+    left: 1.5rem;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background-color: #fff;
+    border: 2px solid #000;
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    padding: 0.75rem 1.25rem;
+    transform: rotate(-2deg);
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+}
+.cp-hero__rating-star { font-size: 1.5rem; line-height: 2rem; }
+.cp-hero__rating-text { line-height: 1.25; }
+.cp-hero__rating-number { font-weight: 900; font-size: 0.875rem; }
+.cp-hero__rating-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+/* franja amarilla debajo del banner → cp-hero__strip */
+.cp-hero__strip {
+    height: 0.625rem;
+    background-color: #facc15;
+    width: 100%;
+    position: relative;
+    z-index: 10;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+}
