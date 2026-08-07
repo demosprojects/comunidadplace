@@ -74,6 +74,28 @@ function formatoPrecio(n) {
 }
 
 // ------------------------------------------------------------
+// MEDIOS DE PAGO (catálogo fijo, compartido entre el dashboard
+// del emprendedor y la tienda pública)
+// ------------------------------------------------------------
+const MEDIOS_PAGO = [
+    { id: 'efectivo',      label: 'Efectivo',            icon: '💵' },
+    { id: 'transferencia', label: 'Transferencia',       icon: '🏦' },
+    { id: 'mercadopago',   label: 'Mercado Pago',        icon: '💳' },
+    { id: 'debito',        label: 'Tarjeta de débito',   icon: '💳' },
+    { id: 'credito',       label: 'Tarjeta de crédito',  icon: '💳' },
+];
+
+function nombreMedioPago(id) {
+    const m = MEDIOS_PAGO.find(m => m.id === id);
+    return m ? m.label : id;
+}
+
+function iconoMedioPago(id) {
+    const m = MEDIOS_PAGO.find(m => m.id === id);
+    return m ? m.icon : '💰';
+}
+
+// ------------------------------------------------------------
 // REALTIME: cambios instantáneos sin recargar la página
 // ------------------------------------------------------------
 // IMPORTANTE: para que esto funcione hay que habilitar Realtime en
