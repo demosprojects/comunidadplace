@@ -5,6 +5,7 @@ let productoModalActual = null;
 let variantesModalActual = [];
 let seleccionVariantes = {}; // { nombreGrupo: {valor, precio_adicional} }
 let cantidadModalActual = 1;
+let mediosPagoModalActual = []; // medios de pago del producto/tienda abiertos en el modal actual
 
 // Filtros activos (paneles desplegables de categoría / emprendedor / orden)
 let categoriaActivaId = 'Todos';
@@ -55,7 +56,45 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     iniciarRealtime();
 
-    document.getElementById('buscador').addEventListener('input', aplicarFiltros);
+    let debounceBusquedaTimeout = null;
+    document.getElementById('buscador').addEventListener('input', () => {
+        clearTimeout(debounceBusquedaTimeout);
+        const texto = document.getElementById('buscador').value.trim();
+        actualizarBotonLimpiarBusqueda();
+        if (texto === '') {
+            // Borraron todo el texto: el catálogo vuelve a mostrarse
+            // completo (respetando los otros filtros que sigan activos).
+            cerrarSugerenciasBusqueda();
+            aplicarFiltros();
+            return;
+        }
+        // Mostramos el skeleton AL INSTANTE (no espera el debounce), así
+        // el usuario ve que el buscador reaccionó apenas tipeó una letra.
+        mostrarSkeletonBusqueda();
+        debounceBusquedaTimeout = setTimeout(() => {
+            // Mientras escribe, SOLO se actualiza el panel de sugerencias.
+            // El catálogo de abajo no se toca: no salta de tamaño y
+            // si un producto no aparece en las sugerencias es porque
+            // no existe, sin necesidad de mirar más abajo.
+            mostrarSugerenciasBusqueda();
+        }, 500);
+    });
+
+    // Si ya hay texto tipeado y el usuario vuelve a tocar el input,
+    // reabrimos el panel de sugerencias en vez de dejarlo cerrado.
+    document.getElementById('buscador').addEventListener('focus', () => {
+        if (document.getElementById('buscador').value.trim() !== '') mostrarSugerenciasBusqueda();
+    });
+
+    document.getElementById('buscador').addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            cerrarSugerenciasBusqueda();
+            document.getElementById('buscador').blur();
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            verTodosResultadosBusqueda();
+        }
+    });
 
     document.addEventListener('click', (e) => {
         ['categoria', 'emprendedor', 'orden'].forEach(tipo => {
@@ -63,6 +102,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cerrarFiltroPanel(tipo);
             }
         });
+        if (!e.target.closest('#buscador') && !e.target.closest('#buscador-sugerencias')) {
+            cerrarSugerenciasBusqueda();
+        }
     });
 
     window.addEventListener('resize', () => {
@@ -291,7 +333,7 @@ function iniciarRealtime() {
 async function cargarProductos() {
     const { data, error } = await supabase
         .from('productos')
-        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok)')
+        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago)')
         .eq('activo', true)
         .eq('emprendedores.activo', true)
         .order('created_at', { ascending: false });
@@ -303,6 +345,19 @@ async function cargarProductos() {
         return;
     }
     productos = data;
+    precargarImagenesProductos();
+}
+
+// Dispara la descarga de todas las fotos de producto en segundo plano,
+// sin esperar a que terminen (no usa await), para que ya estén en la
+// caché del navegador cuando el usuario busque. Funciona sin importar
+// dónde esté alojada cada imagen (Cloudinary, Supabase Storage, etc).
+function precargarImagenesProductos() {
+    productos.forEach(p => {
+        if (!p.imagen_url) return;
+        const img = new Image();
+        img.src = p.imagen_url;
+    });
 }
 
 // ============================================================
@@ -362,6 +417,8 @@ function mostrarProductos(lista) {
 
 function limpiarFiltros() {
     document.getElementById('buscador').value = '';
+    actualizarBotonLimpiarBusqueda();
+    cerrarSugerenciasBusqueda();
 
     categoriaActivaId = 'Todos';
     categoriaActivaLabel = 'Todas';
@@ -401,6 +458,19 @@ function escapeHtml(str) {
     return div.innerHTML;
 }
 
+// Pide a Cloudinary una versión chica y optimizada de la imagen (para
+// miniaturas como las del dropdown de búsqueda), en vez de bajar la
+// imagen completa del producto solo para mostrarla en 40x40px.
+// Si la URL no es de Cloudinary, la devuelve sin tocar.
+function miniaturaCloudinary(url, size = 60) {
+    if (!url) return '';
+    const marcador = '/upload/';
+    const i = url.indexOf(marcador);
+    if (i === -1) return url; // no es una URL de Cloudinary, se usa tal cual
+    const inicio = i + marcador.length;
+    return url.slice(0, inicio) + `w_${size},h_${size},c_fill,q_auto,f_auto/` + url.slice(inicio);
+}
+
 // ============================================================
 // FILTROS (categoría + tienda + búsqueda)
 // ============================================================
@@ -436,6 +506,131 @@ function aplicarFiltros() {
 }
 
 // ============================================================
+// SUGERENCIAS EN VIVO DEL BUSCADOR (dropdown bajo el input)
+// ============================================================
+const MAX_SUGERENCIAS_BUSQUEDA = 6;
+const ICONO_FLECHA_SVG = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`;
+
+// Muestra u oculta la X de "limpiar" según haya texto o no en el input.
+function actualizarBotonLimpiarBusqueda() {
+    const texto = document.getElementById('buscador').value;
+    document.getElementById('buscador-clear').classList.toggle('hidden', texto === '');
+}
+
+function limpiarBusqueda() {
+    const input = document.getElementById('buscador');
+    input.value = '';
+    actualizarBotonLimpiarBusqueda();
+    cerrarSugerenciasBusqueda();
+    aplicarFiltros();
+    input.focus();
+}
+
+// Envuelve en <mark> la parte del texto que coincide con lo buscado,
+// para que salte a la vista por qué apareció ese resultado.
+function resaltarCoincidencia(textoOriginal, queryOriginal) {
+    const texto = escapeHtml(textoOriginal ?? '');
+    const query = escapeHtml((queryOriginal ?? '').trim());
+    if (!query) return texto;
+    const idx = texto.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return texto;
+    return texto.slice(0, idx)
+        + '<mark class="bg-yellow-200 text-black rounded-sm">' + texto.slice(idx, idx + query.length) + '</mark>'
+        + texto.slice(idx + query.length);
+}
+
+// Bloques grises "pulsando" que se muestran al instante mientras se
+// resuelve la búsqueda, para que quede claro que el buscador está
+// procesando y no que se quedó pegado.
+function mostrarSkeletonBusqueda() {
+    const cont = document.getElementById('buscador-sugerencias');
+    const fila = `
+        <div class="w-full flex items-center gap-3 px-3.5 py-3 animate-pulse">
+            <div class="w-11 h-11 rounded-xl bg-gray-200 flex-shrink-0"></div>
+            <div class="flex-1 min-w-0 space-y-1.5">
+                <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+                <div class="h-2 bg-gray-100 rounded w-1/3"></div>
+            </div>
+            <div class="h-3 w-10 bg-gray-200 rounded flex-shrink-0"></div>
+        </div>`;
+    cont.innerHTML = `<div class="divide-y divide-gray-50">${fila.repeat(3)}</div>`;
+    cont.classList.remove('hidden');
+}
+
+function mostrarSugerenciasBusqueda() {
+    const cont = document.getElementById('buscador-sugerencias');
+    const inputEl = document.getElementById('buscador');
+    const textoOriginal = inputEl.value.trim();
+    const texto = textoOriginal.toLowerCase();
+
+    if (texto === '') {
+        cerrarSugerenciasBusqueda();
+        return;
+    }
+
+    const coincidencias = productos.filter(p =>
+        p.nombre.toLowerCase().includes(texto) ||
+        (p.emprendedores && p.emprendedores.nombre_tienda.toLowerCase().includes(texto))
+    );
+
+    if (coincidencias.length === 0) {
+        cont.innerHTML = `
+            <div class="px-6 py-8 text-center">
+                <svg class="w-8 h-8 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                </svg>
+                <p class="text-sm text-gray-600 font-bold">Sin resultados para "${escapeHtml(textoOriginal)}"</p>
+                <p class="text-xs text-gray-400 mt-1">Probá con otra palabra o revisá cómo lo escribiste.</p>
+            </div>`;
+        cont.classList.remove('hidden');
+        return;
+    }
+
+    const paraMostrar = coincidencias.slice(0, MAX_SUGERENCIAS_BUSQUEDA);
+
+    const filas = paraMostrar.map(p => {
+        const tienda = p.emprendedores ? p.emprendedores.nombre_tienda : '';
+        return `
+            <button onclick="irADetalleDesdeBusqueda('${p.id}')" class="group/sug w-full flex items-center gap-3 px-3.5 py-3 hover:bg-yellow-50 transition-colors text-left">
+                <img src="${miniaturaCloudinary(p.imagen_url)}" alt="${escapeHtml(p.nombre)}" class="w-11 h-11 rounded-xl object-cover flex-shrink-0 bg-gray-50 opacity-0 transition-opacity duration-200" loading="lazy" onload="this.classList.remove('opacity-0')" onerror="this.classList.remove('opacity-0'); this.style.display='none'">
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-sm truncate">${resaltarCoincidencia(p.nombre, textoOriginal)}</p>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-widest truncate mt-0.5">${resaltarCoincidencia(tienda, textoOriginal)}</p>
+                </div>
+                <span class="font-black text-sm flex-shrink-0">${formatoPrecio(p.precio)}</span>
+                <span class="text-gray-300 group-hover/sug:text-yellow-500 group-hover/sug:translate-x-0.5 transition-all flex-shrink-0">${ICONO_FLECHA_SVG}</span>
+            </button>`;
+    }).join('');
+
+    const footer = `
+        <button onclick="verTodosResultadosBusqueda()" class="w-full flex items-center justify-center gap-1.5 py-3 bg-gray-50/70 font-bold text-xs uppercase tracking-widest text-yellow-600 hover:bg-yellow-50 transition-colors">
+            Ver ${coincidencias.length === 1 ? 'el' : 'los'} ${coincidencias.length} resultado${coincidencias.length === 1 ? '' : 's'}
+            ${ICONO_FLECHA_SVG}
+        </button>`;
+
+    cont.innerHTML = `<div class="divide-y divide-gray-50">${filas}</div>` + footer;
+    cont.classList.remove('hidden');
+}
+
+function irADetalleDesdeBusqueda(id) {
+    cerrarSugerenciasBusqueda();
+    verDetalles(id);
+}
+
+function verTodosResultadosBusqueda() {
+    cerrarSugerenciasBusqueda();
+    aplicarFiltros(); // recién acá el catálogo se filtra por el texto buscado
+    const destino = document.getElementById('contenedor-productos');
+    if (destino) destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cerrarSugerenciasBusqueda() {
+    const cont = document.getElementById('buscador-sugerencias');
+    cont.classList.add('hidden');
+    cont.innerHTML = '';
+}
+
+// ============================================================
 // MODAL DE DETALLE + VARIANTES
 // ============================================================
 async function verDetalles(id) {
@@ -452,6 +647,8 @@ async function verDetalles(id) {
     modalTienda.innerText = p.emprendedores ? p.emprendedores.nombre_tienda : '';
     modalTienda.onclick = () => abrirPerfilEmprendedor(p.emprendedores ? p.emprendedores.id : '');
     document.getElementById('modal-desc').innerText = p.descripcion || '';
+
+    renderMediosPagoModal(p);
 
     const { data: variantes, error } = await supabase.from('variantes').select('*').eq('producto_id', id);
     variantesModalActual = error ? [] : variantes;
@@ -529,7 +726,51 @@ function actualizarPrecioYWhatsapp() {
     }
 }
 
+function renderMediosPagoModal(p) {
+    const wrap = document.getElementById('modal-medios-pago-wrap');
+
+    // Si el producto tiene medios propios, se usan esos; si no, se muestran
+    // todos los que configuró la tienda.
+    const mediosProducto = p.medios_pago && p.medios_pago.length > 0
+        ? p.medios_pago
+        : (p.emprendedores ? (p.emprendedores.medios_pago || []) : []);
+
+    mediosPagoModalActual = mediosProducto;
+
+    if (mediosProducto.length === 0) {
+        wrap.classList.add('hidden');
+        return;
+    }
+
+    wrap.classList.remove('hidden');
+}
+
+// Modal secundario: lista de medios de pago disponibles para el producto
+// abierto. Se muestra encima del modal de producto para no alargarlo en mobile.
+function abrirModalMediosPago() {
+    const cont = document.getElementById('modal-medios-pago-lista');
+    cont.innerHTML = mediosPagoModalActual.map(id => `
+        <span class="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full text-xs font-semibold text-gray-700">
+            <span>${iconoMedioPago(id)}</span><span>${escapeHtml(nombreMedioPago(id))}</span>
+        </span>
+    `).join('');
+    document.getElementById('modal-medios-pago-modal').classList.remove('hidden');
+    bloquearScrollBody();
+}
+
+function cerrarModalMediosPago() {
+    document.getElementById('modal-medios-pago-modal').classList.add('hidden');
+    desbloquearScrollBody();
+}
+
 function cerrarModal() {
+    // Si el modal de medios de pago quedó abierto encima, lo cerramos primero
+    // para no dejar el contador de bloqueo de scroll desincronizado.
+    const modalMediosPago = document.getElementById('modal-medios-pago-modal');
+    if (modalMediosPago && !modalMediosPago.classList.contains('hidden')) {
+        cerrarModalMediosPago();
+    }
+
     document.getElementById('modal-producto-overlay').classList.remove('abierto');
     document.getElementById('modal-producto').classList.remove('abierto');
     desbloquearScrollBody();
@@ -583,10 +824,23 @@ function abrirPerfilEmprendedor(emprendedorId) {
 
     // Banner de fondo (opcional)
     const bannerWrap = document.getElementById('perfil-banner-wrap');
+    const bannerImg = document.getElementById('perfil-banner');
     if (e.banner_url) {
-        document.getElementById('perfil-banner').src = e.banner_url;
-        bannerWrap.classList.remove('hidden');
+        if (bannerImg.src === e.banner_url && bannerImg.complete) {
+            // Es la misma imagen que ya está cargada (ej: reabrís el mismo
+            // emprendedor): la mostramos directo, no hay nada que esperar.
+            bannerWrap.classList.remove('hidden');
+        } else {
+            // Ocultamos el banner viejo ANTES de pisar el src, para no
+            // mostrar por un instante la foto del emprendedor anterior
+            // mientras se descarga la nueva.
+            bannerWrap.classList.add('hidden');
+            bannerImg.onload = () => bannerWrap.classList.remove('hidden');
+            bannerImg.onerror = () => bannerWrap.classList.add('hidden');
+            bannerImg.src = e.banner_url;
+        }
     } else {
+        bannerImg.removeAttribute('src');
         bannerWrap.classList.add('hidden');
     }
 
