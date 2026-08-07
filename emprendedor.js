@@ -10,6 +10,7 @@ let productoModalActual = null;
 let variantesModalActual = [];
 let seleccionVariantes = {};
 let cantidadModalActual = 1;
+let mediosPagoModalActual = []; // medios de pago del producto/tienda abiertos en el modal actual
 
 const CARRITO_STORAGE_KEY = 'cp_carrito_v1';
 let carrito = { emprendedorId: null, emprendedorNombre: '', emprendedorWhatsapp: '', items: [] };
@@ -130,7 +131,7 @@ function iniciarRealtimeEmprendedor(id) {
 async function cargarProductosDelEmprendedor(emprendedorId) {
     const { data, error } = await supabase
         .from('productos')
-        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, bio)')
+        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, bio, medios_pago)')
         .eq('activo', true)
         .eq('emprendedor_id', emprendedorId)
         .order('created_at', { ascending: false });
@@ -202,6 +203,22 @@ function renderPerfil(e) {
         document.getElementById('perfil-horario').innerText = e.horario_atencion;
         horarioWrap.classList.remove('hidden');
         horarioWrap.classList.add('inline-flex');
+    }
+
+    // Medios de pago aceptados por la tienda
+    const mediosPagoWrap = document.getElementById('perfil-medios-pago-wrap');
+    const mediosPago = e.medios_pago || [];
+    if (mediosPago.length > 0) {
+        document.getElementById('perfil-medios-pago').innerHTML = mediosPago.map(id => `
+            <span class="inline-flex items-center gap-1 bg-white border border-gray-200/80 px-2.5 py-1 rounded-full text-[11px] font-semibold text-gray-700">
+                <span>${iconoMedioPago(id)}</span><span>${escapeHtml(nombreMedioPago(id))}</span>
+            </span>
+        `).join('');
+        mediosPagoWrap.classList.remove('hidden');
+        mediosPagoWrap.classList.add('flex');
+    } else {
+        mediosPagoWrap.classList.add('hidden');
+        mediosPagoWrap.classList.remove('flex');
     }
 
     // Redes sociales
@@ -304,6 +321,8 @@ async function verDetalles(id) {
     document.getElementById('modal-tienda').innerText = p.emprendedores ? p.emprendedores.nombre_tienda : '';
     document.getElementById('modal-desc').innerText = p.descripcion || '';
 
+    renderMediosPagoModal(p);
+
     const { data: variantes, error } = await supabase.from('variantes').select('*').eq('producto_id', id);
     variantesModalActual = error ? [] : variantes;
 
@@ -380,7 +399,51 @@ function actualizarPrecioYWhatsapp() {
     }
 }
 
+function renderMediosPagoModal(p) {
+    const wrap = document.getElementById('modal-medios-pago-wrap');
+
+    // Si el producto tiene medios propios, se usan esos; si no, se muestran
+    // todos los que configuró la tienda.
+    const mediosProducto = p.medios_pago && p.medios_pago.length > 0
+        ? p.medios_pago
+        : (p.emprendedores ? (p.emprendedores.medios_pago || []) : []);
+
+    mediosPagoModalActual = mediosProducto;
+
+    if (mediosProducto.length === 0) {
+        wrap.classList.add('hidden');
+        return;
+    }
+
+    wrap.classList.remove('hidden');
+}
+
+// Modal secundario: lista de medios de pago disponibles para el producto
+// abierto. Se muestra encima del modal de producto para no alargarlo en mobile.
+function abrirModalMediosPago() {
+    const cont = document.getElementById('modal-medios-pago-lista');
+    cont.innerHTML = mediosPagoModalActual.map(id => `
+        <span class="inline-flex items-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-full text-xs font-semibold text-gray-700">
+            <span>${iconoMedioPago(id)}</span><span>${escapeHtml(nombreMedioPago(id))}</span>
+        </span>
+    `).join('');
+    document.getElementById('modal-medios-pago-modal').classList.remove('hidden');
+    bloquearScrollBody();
+}
+
+function cerrarModalMediosPago() {
+    document.getElementById('modal-medios-pago-modal').classList.add('hidden');
+    desbloquearScrollBody();
+}
+
 function cerrarModal() {
+    // Si el modal de medios de pago quedó abierto encima, lo cerramos primero
+    // para no dejar el contador de bloqueo de scroll desincronizado.
+    const modalMediosPago = document.getElementById('modal-medios-pago-modal');
+    if (modalMediosPago && !modalMediosPago.classList.contains('hidden')) {
+        cerrarModalMediosPago();
+    }
+
     document.getElementById('modal-producto-overlay').classList.remove('abierto');
     document.getElementById('modal-producto').classList.remove('abierto');
     desbloquearScrollBody();
