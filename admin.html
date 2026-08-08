@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin | Comunidad Place</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        obsidian: '#0b0c10',
+                        surface: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(8px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .animate-fade-in { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        /* Scrollbar suave */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-[#f1f5f9] text-slate-900 antialiased min-h-screen selection:bg-yellow-400 selection:text-black">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+
+        <!-- TOP BAR MOBILE -->
+        <header class="md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 bg-obsidian text-white px-4 py-3 border-b border-white/10 shadow-lg">
+            <div class="flex items-center gap-2.5 min-w-0">
+              
+                <span class="text-sm font-extrabold tracking-tight uppercase truncate">
+                    <span class="text-yellow-400">Comunidad</span>Emprendedora
+                </span>
+            </div>
+            <button onclick="abrirSidebarMobile()" aria-label="Abrir menú" class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </header>
+
+        <!-- OVERLAY MOBILE -->
+        <div id="sidebar-overlay" onclick="cerrarSidebarMobile()" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"></div>
+
+        <!-- SIDEBAR PREMIUM -->
+        <aside id="sidebar" class="fixed md:sticky inset-y-0 left-0 md:top-0 md:h-screen w-72 max-w-[85vw] -translate-x-full md:translate-x-0 transition-transform duration-300 ease-out overflow-y-auto bg-obsidian text-white p-6 md:p-8 flex flex-col border-r border-white/5 z-40 shadow-2xl">
+            <button onclick="cerrarSidebarMobile()" aria-label="Cerrar menú" class="md:hidden absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition">
+                ✕
+            </button>
+            <div class="flex-1 flex flex-col min-h-0">
+                <!-- Encabezado & Logo -->
+                <div class="flex items-center gap-3 mb-3">
+                   
+                    <div class="text-2xl font-extrabold tracking-tight uppercase leading-tight">
+                        <span class="text-yellow-400 block">Comunidad</span>
+                        <span class="block">Emprendedora</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-2 mb-8 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full w-fit">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
+                    <p class="text-slate-300 font-semibold text-xs tracking-wide">Comunidad Place</p>
+                </div>
+
+                <!-- Navegación principal -->
+                <nav class="space-y-2">
+                    <button id="nav-emprendedores" onclick="mostrarSeccion('emprendedores'); cerrarSidebarMobile()" class="w-full text-left bg-yellow-400 text-black px-4 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-yellow-400/10 flex items-center justify-between group">
+                        <span>Emprendedores</span>
+                        <svg class="w-4 h-4 opacity-60 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                    <button id="nav-categorias" onclick="mostrarSeccion('categorias'); cerrarSidebarMobile()" class="w-full text-left text-gray-400 hover:text-white px-4 py-2.5 rounded-xl transition-all flex items-center justify-between group">
+                        <span>Categorías</span>
+                        <svg class="w-4 h-4 opacity-0 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                    <button id="nav-productos" onclick="mostrarSeccion('productos'); cerrarSidebarMobile()" class="w-full text-left text-gray-400 hover:text-white px-4 py-2.5 rounded-xl transition-all flex items-center justify-between group">
+                        <span>Todos los productos</span>
+                        <svg class="w-4 h-4 opacity-0 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                    
+                    <div class="pt-4 mt-4 border-t border-white/10">
+                        <a href="index.html" class="flex items-center justify-between text-slate-400 hover:text-yellow-400 px-4 py-2.5 rounded-xl transition-colors text-sm font-semibold group">
+                            <span>Ver Tienda Pública</span>
+                            <svg class="w-4 h-4 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+
+            <!-- Footer Sidebar / Cerrar Sesión -->
+            <div class="pt-6 border-t border-white/10 mt-6 flex-shrink-0">
+                <button onclick="cerrarSesion()" class="w-full flex items-center justify-center gap-2 text-rose-400 hover:text-white hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 px-4 py-3 rounded-xl text-xs uppercase tracking-wider font-bold transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- CONTENEDOR PRINCIPAL -->
+        <main class="flex-1 p-4 sm:p-6 md:p-12 lg:p-14 max-w-7xl mx-auto w-full min-w-0">
+
+            <!-- SECCIÓN: EMPRENDEDORES -->
+            <section id="section-emprendedores" class="animate-fade-in">
+                <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6 md:mb-10 pb-6 border-b border-slate-200/80">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/20 text-yellow-800 text-xs font-bold uppercase tracking-wider mb-3">
+                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                            Gestión General
+                        </div>
+                        <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+                            Emprendedores
+                        </h1>
+                        <p class="text-slate-500 text-sm md:text-base mt-1">
+                            Activá o bloqueá tiendas registradas en la comunidad.
+                        </p>
+                        <p id="contador-emprendedores" class="text-slate-400 text-xs font-bold uppercase tracking-wider mt-3"></p>
+                    </div>
+                </header>
+
+                <!-- GRID DE EMPRENDEDORES -->
+                <div id="grid-emprendedores" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                    <div class="col-span-full flex flex-col items-center justify-center gap-3 py-24 text-slate-400 font-semibold">
+                        <svg class="w-6 h-6 animate-spin text-slate-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span>Cargando emprendedores...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN: CATEGORIAS -->
+            <section id="section-categorias" class="hidden animate-fade-in">
+                <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-6 md:mb-10 pb-6 border-b border-slate-200/80">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-200/60 text-slate-700 text-xs font-bold uppercase tracking-wider mb-3">
+                            Estructura de Tienda
+                        </div>
+                        <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+                            Categorías
+                        </h1>
+                        <p class="text-slate-500 text-sm md:text-base mt-1">
+                            Administrá las categorías globales del marketplace.
+                        </p>
+                    </div>
+                    <button onclick="abrirModalCategoria()" class="inline-flex items-center justify-center gap-2 bg-obsidian text-white px-6 py-3.5 rounded-2xl font-bold text-sm hover:bg-yellow-400 hover:text-black transition-all duration-200 shadow-xl shadow-slate-900/10 hover:shadow-yellow-400/25 active:scale-95 group shrink-0">
+                        <span class="text-lg leading-none group-hover:rotate-90 transition-transform duration-300">+</span>
+                        <span>Nueva categoría</span>
+                    </button>
+                </header>
+
+                <div id="tabla-categorias" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <div class="col-span-full flex flex-col items-center justify-center gap-2 py-16 text-slate-400 font-semibold">
+                        <svg class="w-6 h-6 animate-spin text-slate-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span>Cargando categorías...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN: TODOS LOS PRODUCTOS -->
+            <section id="section-productos" class="hidden animate-fade-in">
+                <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6 md:mb-10 pb-6 border-b border-slate-200/80">
+                    <div>
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-200/60 text-slate-700 text-xs font-bold uppercase tracking-wider mb-3">
+                            Supervisión
+                        </div>
+                        <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+                            Todos los productos
+                        </h1>
+                        <p class="text-slate-500 text-sm md:text-base mt-1">
+                            Vista global de productos publicados por todas las tiendas.
+                        </p>
+                    </div>
+                </header>
+
+                <div id="tabla-productos-admin" class="space-y-3">
+                    <div class="flex flex-col items-center justify-center gap-2 py-16 text-slate-400 font-semibold">
+                        <svg class="w-6 h-6 animate-spin text-slate-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span>Cargando productos...</span>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL CATEGORIA -->
+    <div id="modal-categoria" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 sm:p-6">
+        <div class="absolute inset-0 bg-obsidian/70 backdrop-blur-md transition-opacity" onclick="cerrarModalCategoria()"></div>
+        
+        <form id="form-categoria" class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 relative z-10 shadow-2xl border border-white/20 animate-fade-in">
+            <div class="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight">Nueva categoría</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Ingresá el nombre que aparecerá en la tienda</p>
+                </div>
+                <button type="button" onclick="cerrarModalCategoria()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition">
+                    ✕
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nombre de la categoría</label>
+                <input type="text" id="cat-nombre" required placeholder="Ej: Indumentaria, Tecnología..." class="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+            </div>
+
+            <div class="flex gap-3 pt-2 border-t border-slate-100">
+                <button type="button" onclick="cerrarModalCategoria()" class="w-1/3 py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" class="w-2/3 bg-obsidian text-white py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-yellow-400 hover:text-black transition-all shadow-lg shadow-slate-900/10">
+                    Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script src="supabase-client.js"></script>
+    <script src="admin.js"></script>
+    <script>
+        // ============================================================
+        // MENÚ HAMBURGUESA (MOBILE)
+        // ============================================================
+        function abrirSidebarMobile() {
+            document.getElementById('sidebar').classList.remove('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+        function cerrarSidebarMobile() {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+        // Si se agranda la ventana a desktop, aseguramos que quede todo limpio
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) cerrarSidebarMobile();
+        });
+    </script>
+</body>
+</html>

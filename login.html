@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingresar | Comunidad Place</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style> body { font-family: 'Inter', sans-serif; } </style>
+</head>
+<body class="bg-gray-50 text-black min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md">
+        <div class="text-center mb-8">
+            <div class="text-xl font-900 tracking-widest uppercase inline-block">
+                <span class="bg-yellow-400 text-black px-2 mr-1">COMUNIDAD</span>PLACE
+            </div>
+        </div>
+
+        <div class="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+            <h1 class="text-2xl font-900 uppercase italic mb-1">Ingresar</h1>
+            <p class="text-gray-500 text-sm mb-6">Accedé a tu panel de emprendedor.</p>
+
+            <form id="form-login" class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black uppercase mb-1 tracking-widest text-gray-400">Usuario</label>
+                    <input type="text" id="usuario" required autocomplete="username"
+                        class="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-yellow-400 outline-none font-bold transition">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black uppercase mb-1 tracking-widest text-gray-400">Contraseña</label>
+                    <input type="password" id="password" required autocomplete="current-password"
+                        class="w-full border-2 border-gray-100 rounded-xl p-3 focus:border-yellow-400 outline-none font-bold transition">
+                </div>
+
+                <p id="msg-error" class="hidden text-red-500 text-xs font-bold"></p>
+
+                <button type="submit" id="btn-login"
+                    class="w-full bg-black text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-yellow-400 hover:text-black transition-all shadow-xl active:scale-95">
+                    Ingresar
+                </button>
+            </form>
+
+        </div>
+
+        <p class="text-center mt-6">
+            <a href="index.html" class="text-gray-400 text-xs uppercase tracking-widest font-bold hover:text-black transition">← Volver a la tienda</a>
+        </p>
+    </div>
+
+    <script src="supabase-client.js"></script>
+    <script src="login.js"></script>
+</body>
+</html>

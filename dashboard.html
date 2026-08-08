@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Emprendedor | Comunidad Place</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        obsidian: '#0b0c10',
+                        surface: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(8px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .animate-fade-in { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
+        /* Personalización sutil del scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-[#f1f5f9] text-slate-900 antialiased min-h-screen selection:bg-yellow-400 selection:text-black">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+
+        <!-- TOP BAR MOBILE -->
+        <header class="md:hidden sticky top-0 z-30 flex items-center justify-between gap-3 bg-obsidian text-white px-4 py-3 border-b border-white/10 shadow-lg">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="text-base font-extrabold tracking-tight uppercase truncate">
+                    <span class="text-yellow-400">Gestión</span>
+                </span>
+            </div>
+            <button onclick="abrirSidebarMobile()" aria-label="Abrir menú" class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 transition-all">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+        </header>
+
+        <!-- OVERLAY MOBILE -->
+        <div id="sidebar-overlay" onclick="cerrarSidebarMobile()" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"></div>
+
+        <!-- SIDEBAR PREMIUM -->
+        <aside id="sidebar" class="fixed md:sticky inset-y-0 left-0 md:top-0 md:h-screen w-72 max-w-[85vw] -translate-x-full md:translate-x-0 transition-transform duration-300 ease-out overflow-y-auto bg-obsidian text-white p-6 md:p-8 flex flex-col border-r border-white/5 z-40 shadow-2xl">
+            <button onclick="cerrarSidebarMobile()" aria-label="Cerrar menú" class="md:hidden absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition">
+                ✕
+            </button>
+            <div class="flex-1 flex flex-col min-h-0">
+                <!-- Encabezado & Logo -->
+                <div class="flex items-center gap-3 mb-6">
+                    
+                    <div class="text-2xl font-extrabold tracking-tight uppercase">
+                        <span class="text-yellow-400">Gestión</span>
+                    </div>
+                </div>
+
+                <!-- Tarjeta de cuenta -->
+                <div class="flex items-center gap-3 mb-8 bg-white/5 border border-white/10 p-3 rounded-2xl">
+                    <div id="avatar-sidebar" class="w-11 h-11 rounded-xl bg-gradient-to-tr from-yellow-400 to-amber-300 flex items-center justify-center text-black font-black text-base flex-shrink-0 overflow-hidden relative">
+                        <img id="avatar-sidebar-img" src="" alt="" class="hidden absolute inset-0 w-full h-full object-cover">
+                        <span id="avatar-sidebar-letra">?</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p id="nombre-tienda-sidebar" class="text-white font-bold text-sm leading-tight truncate"></p>
+                        <p id="usuario-sidebar" class="text-slate-400 text-[11px] font-semibold truncate"></p>
+                    </div>
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" title="Sesión activa"></span>
+                </div>
+
+                <!-- Navegación principal -->
+                <nav class="space-y-1.5">
+                    <p class="px-4 mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Gestión</p>
+                    <button id="nav-productos" onclick="mostrarSeccion('productos'); cerrarSidebarMobile()" class="w-full text-left bg-yellow-400 text-black px-4 py-3 rounded-xl font-bold transition-all shadow-md shadow-yellow-400/10 flex items-center gap-3 group">
+                        <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                        <span class="flex-1">Mis productos</span>
+                        <svg class="w-4 h-4 opacity-60 group-hover:translate-x-0.5 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+                    <button id="nav-perfil" onclick="mostrarSeccion('perfil'); cerrarSidebarMobile()" class="w-full text-left text-slate-400 hover:text-white hover:bg-white/5 px-4 py-3 rounded-xl transition-all flex items-center gap-3 group">
+                        <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4.418 0-8 2.239-8 5v1h16v-1c0-2.761-3.582-5-8-5z"/></svg>
+                        <span class="flex-1">Mis datos</span>
+                        <svg class="w-4 h-4 opacity-0 group-hover:opacity-60 group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </button>
+
+                    <div class="pt-4 mt-4 border-t border-white/10">
+                        <p class="px-4 mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">Comunidad</p>
+                        <a href="index.html" class="flex items-center gap-3 text-slate-400 hover:text-yellow-400 hover:bg-white/5 px-4 py-3 rounded-xl transition-colors text-sm font-semibold group">
+                            <svg class="w-[18px] h-[18px] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10m-9 11h.01"/></svg>
+                            <span class="flex-1">Ir a mi perfil</span>
+                            <svg class="w-4 h-4 transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+
+            <!-- Footer Sidebar / Cerrar Sesión (siempre visible) -->
+            <div class="pt-6 border-t border-white/10 mt-6 flex-shrink-0">
+                <button onclick="cerrarSesion()" class="w-full flex items-center justify-center gap-2 text-rose-400 hover:text-white hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 px-4 py-3 rounded-xl text-xs uppercase tracking-wider font-bold transition-all">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    <span>Cerrar Sesión</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- CONTENEDOR PRINCIPAL -->
+        <main class="flex-1 p-4 sm:p-6 md:p-12 lg:p-14 max-w-7xl mx-auto w-full min-w-0">
+
+            <!-- SECCIÓN: MIS PRODUCTOS -->
+            <section id="section-productos" class="animate-fade-in">
+                <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-6 md:mb-10 pb-6 border-b border-slate-200/80">
+                    <div>
+                        <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+                            Productos cargados
+                        </h1>
+                        <p class="text-slate-500 text-sm md:text-base mt-2">
+                            Administra tus productos.
+                        </p>
+                        <p id="contador-productos" class="text-slate-400 text-xs font-bold uppercase tracking-wider mt-3"></p>
+                    </div>
+                    <button id="btn-nuevo-producto-header" onclick="abrirFormulario()" class="inline-flex items-center justify-center gap-2 bg-obsidian text-white px-6 py-3.5 rounded-2xl font-bold text-sm hover:bg-yellow-400 hover:text-black transition-all duration-200 shadow-xl shadow-slate-900/10 hover:shadow-yellow-400/25 active:scale-95 group shrink-0">
+                        <span class="text-lg leading-none group-hover:rotate-90 transition-transform duration-300">+</span>
+                        <span>Nuevo producto</span>
+                    </button>
+                </header>
+
+                <!-- GRID DE PRODUCTOS -->
+                <div id="grid-productos" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                    <div class="col-span-full flex flex-col items-center justify-center gap-3 py-24 text-slate-400 font-semibold">
+                        <svg class="w-6 h-6 animate-spin text-slate-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span>Cargando productos...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECCIÓN: MI PERFIL -->
+            <section id="section-perfil" class="hidden animate-fade-in">
+                <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6 mb-6 md:mb-10 pb-6 border-b border-slate-200/80">
+                    <div>
+                        <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+                            Mis datos
+                        </h1>
+                        <p class="text-slate-500 text-sm md:text-base mt-2">
+                            Define la identidad visual y los canales de contacto de tu negocio.
+                        </p>
+                    </div>
+                </header>
+
+
+                <div class="max-w-3xl space-y-6">
+
+                    <!-- IDENTIDAD DE MARCA -->
+                    <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-yellow-400/15 text-yellow-700 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7l2-4h14l2 4M3 7v11a2 2 0 002 2h14a2 2 0 002-2V7M3 7h18M8 11a2 2 0 104 0 2 2 0 00-4 0z"/></svg>
+                            </div>
+                            <div>
+                                <h2 class="font-extrabold text-slate-900">Identidad de marca</h2>
+                                <p class="text-xs text-slate-400">Cómo te van a ver en la comunidad</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="flex items-center gap-4">
+                                <div class="relative w-16 h-16 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex-shrink-0">
+                                    <img id="p-logo-preview" src="" class="hidden absolute inset-0 w-full h-full object-cover">
+                                    <div id="p-logo-preview-placeholder" class="w-full h-full flex items-center justify-center text-slate-300">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h16M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg>
+                                    </div>
+                                    <div id="p-logo-spinner" class="hidden absolute inset-0 bg-white/85 flex items-center justify-center">
+                                        <svg class="w-5 h-5 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                        Logo
+                                    </label>
+                                    <input type="file" id="p-logo-input" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="manejarSeleccionLogo(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-obsidian file:text-white hover:file:bg-yellow-400 hover:file:text-black file:transition-colors file:cursor-pointer cursor-pointer">
+                                    <p class="text-[11px] text-slate-400 mt-1.5">JPG, PNG o WebP · máx 3MB</p>
+                                    <input type="hidden" id="p-logo">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    Nombre del emprendimiento
+                                </label>
+                                <input type="text" id="p-nombre" class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-semibold text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    Banner / Portada <span class="text-slate-400 font-normal lowercase">(opcional)</span>
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <div class="relative w-24 h-14 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex-shrink-0">
+                                        <img id="p-banner-preview" src="" class="hidden absolute inset-0 w-full h-full object-cover">
+                                        <div id="p-banner-preview-placeholder" class="w-full h-full flex items-center justify-center text-slate-300">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h16M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg>
+                                        </div>
+                                        <div id="p-banner-spinner" class="hidden absolute inset-0 bg-white/85 flex items-center justify-center">
+                                            <svg class="w-5 h-5 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <input type="file" id="p-banner-input" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="manejarSeleccionBanner(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-obsidian file:text-white hover:file:bg-yellow-400 hover:file:text-black file:transition-colors file:cursor-pointer cursor-pointer">
+                                        <p class="text-[11px] text-slate-400 mt-1.5">Imagen ancha para arriba de tu perfil público. JPG, PNG o WebP · máx 3MB</p>
+                                        <input type="hidden" id="p-banner">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    Descripción / Bio de la marca
+                                </label>
+                                <textarea id="p-bio" rows="4" class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-medium text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all resize-none" placeholder="Cuéntale a la comunidad qué hace única a tu marca..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTACTO Y UBICACIÓN -->
+                    <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-400/15 text-emerald-700 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/><circle cx="12" cy="11" r="2.5"/></svg>
+                            </div>
+                            <div>
+                                <h2 class="font-extrabold text-slate-900">Contacto y ubicación</h2>
+                                <p class="text-xs text-slate-400">Para que te encuentren y te escriban</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    WhatsApp <span class="text-slate-400 font-normal lowercase">(país + número)</span>
+                                </label>
+                                <input type="text" id="p-whatsapp" placeholder="Ej: 54911..." class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-semibold text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                        Ubicación / Zona
+                                    </label>
+                                    <input type="text" id="p-ubicacion" placeholder="Ej: Resistencia, Chaco" class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-semibold text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                        Link de Google Maps <span class="text-slate-400 font-normal lowercase">(opcional)</span>
+                                    </label>
+                                    <input type="url" id="p-mapa" placeholder="https://maps.app.goo.gl/..." class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-semibold text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    Horario de atención
+                                </label>
+                                <input type="text" id="p-horario" placeholder="Ej: Lunes a viernes de 9 a 18hs" class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-semibold text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- REDES SOCIALES -->
+                    <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-sky-400/15 text-sky-700 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342a4 4 0 100-2.684m0 2.684a4 4 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a4 4 0 105.367-1.925 4 4 0 00-5.367 1.925zm0 9.316a4 4 0 105.368 1.925 4 4 0 00-5.368-1.925z"/></svg>
+                            </div>
+                            <div>
+                                <h2 class="font-extrabold text-slate-900">Redes sociales</h2>
+                                <p class="text-xs text-slate-400">Opcional, sumá tus enlaces</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    Instagram
+                                </label>
+                                <input type="url" id="p-instagram" placeholder="https://instagram.com/tu_usuario" class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-semibold text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    Facebook
+                                </label>
+                                <input type="url" id="p-facebook" placeholder="https://facebook.com/tu_pagina" class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-semibold text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                                    TikTok
+                                </label>
+                                <input type="url" id="p-tiktok" placeholder="https://tiktok.com/@tu_usuario" class="w-full bg-slate-50/50 border border-slate-200 rounded-2xl p-3.5 text-slate-900 font-semibold text-sm focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MEDIOS DE PAGO -->
+                    <div class="bg-white rounded-3xl p-6 md:p-8 border border-slate-200/80 shadow-sm">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 rounded-xl bg-violet-400/15 text-violet-700 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-9 4h16a1 1 0 001-1V6a1 1 0 00-1-1H4a1 1 0 00-1 1v12a1 1 0 001 1z"/></svg>
+                            </div>
+                            <div>
+                                <h2 class="font-extrabold text-slate-900">Medios de pago</h2>
+                                <p class="text-xs text-slate-400">Elegí los que aceptás; después los asignás por producto</p>
+                            </div>
+                        </div>
+                        <div id="medios-pago-perfil" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <!-- Guardar (acceso rápido al final del formulario) -->
+                    <div class="flex justify-end pb-2">
+                        <button onclick="guardarPerfil()" id="btn-guardar-perfil-2" class="w-full sm:w-auto bg-obsidian text-white px-10 py-4 rounded-2xl font-bold uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all duration-200 shadow-xl shadow-slate-900/10 active:scale-95">
+                            Guardar Perfil
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL PRODUCTO -->
+    <div id="modal-form" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 sm:p-6">
+        <div class="absolute inset-0 bg-obsidian/70 backdrop-blur-md transition-opacity" onclick="cerrarFormulario()"></div>
+
+        <form id="form-producto" class="bg-white w-full max-w-xl max-h-[88vh] rounded-3xl relative z-10 shadow-2xl border border-white/20 overflow-hidden flex flex-col animate-fade-in">
+
+            <!-- Encabezado fijo -->
+            <div class="shrink-0 flex items-center justify-between gap-4 px-6 sm:px-7 py-5 border-b border-slate-100">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-yellow-400/15 text-yellow-700 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </div>
+                    <div class="min-w-0">
+                        <h2 id="titulo-modal" class="text-lg font-extrabold text-slate-900 tracking-tight truncate">Subir Producto</h2>
+                        <p class="text-xs text-slate-400 truncate">Completá los datos y especificaciones de venta</p>
+                    </div>
+                </div>
+                <button type="button" onclick="cerrarFormulario()" class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition flex-shrink-0">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Cuerpo con scroll interno -->
+            <div class="flex-1 overflow-y-auto px-6 sm:px-7 py-6 space-y-5">
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nombre del producto</label>
+                        <input type="text" id="nombre" required class="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3 text-sm font-semibold focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Precio ($)</label>
+                            <input type="number" step="0.01" id="precio" required class="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3 text-sm font-semibold focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Categoría</label>
+                            <select id="categoria" class="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3 text-sm font-semibold focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Imagen del producto</label>
+                    <div class="flex items-center gap-3">
+                        <div class="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-50 border border-slate-200 flex-shrink-0">
+                            <img id="imagen-producto-preview" src="" class="hidden absolute inset-0 w-full h-full object-cover">
+                            <div id="imagen-producto-preview-placeholder" class="w-full h-full flex items-center justify-center text-slate-300">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h16M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z"/></svg>
+                            </div>
+                            <div id="imagen-producto-spinner" class="hidden absolute inset-0 bg-white/85 flex items-center justify-center">
+                                <svg class="w-5 h-5 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            </div>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <input type="file" id="imagen-producto-input" accept="image/jpeg,image/jpg,image/png,image/webp" onchange="manejarSeleccionImagenProducto(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:uppercase file:tracking-wider file:bg-obsidian file:text-white hover:file:bg-yellow-400 hover:file:text-black file:transition-colors file:cursor-pointer cursor-pointer">
+                            <p id="imagen-producto-status" class="text-[11px] text-slate-400 mt-1.5">JPG, PNG o WebP · máx 3MB · se optimiza sola</p>
+                        </div>
+                    </div>
+                    <input type="hidden" id="imagen">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Descripción corta</label>
+                    <textarea id="descripcion" rows="3" class="w-full bg-slate-50/60 border border-slate-200 rounded-xl p-3 text-sm font-medium focus:bg-white focus:border-obsidian focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all resize-none"></textarea>
+                </div>
+
+                <label class="flex items-center justify-between gap-3 cursor-pointer select-none bg-slate-50 border border-slate-200/60 rounded-2xl p-3.5">
+                    <div class="min-w-0 pr-2">
+                        <span class="block text-xs font-bold uppercase tracking-wider text-slate-700">Visible en la tienda</span>
+                        <span class="block text-[11px] text-slate-400 mt-0.5">Si lo apagás, se mantiene oculto en el catálogo público</span>
+                    </div>
+                    <input type="checkbox" id="activo" checked class="peer sr-only">
+                    <div class="w-11 h-6 shrink-0 bg-slate-300 peer-checked:bg-obsidian rounded-full relative transition-colors duration-200 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:w-5 after:h-5 after:rounded-full after:shadow-sm after:transition-transform after:duration-200 peer-checked:after:translate-x-5"></div>
+                </label>
+
+                <div id="medios-pago-producto-wrap" class="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/60">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-0.5">Medios de pago aceptados</label>
+                    <p class="text-[11px] text-slate-400 mb-3">Opcional. Si no marcás ninguno, se muestran todos los medios configurados en tu perfil.</p>
+                    <div id="medios-pago-producto" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- SECCIÓN VARIANTES -->
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">Variantes</label>
+                            <p class="text-[11px] text-slate-400">Opcional. Ej: "Talle", "M", "+$500"</p>
+                        </div>
+                        <button type="button" onclick="agregarFilaVariante()" class="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider bg-yellow-400/10 hover:bg-yellow-400 text-yellow-800 hover:text-black px-3 py-1.5 rounded-lg border border-yellow-400/30 transition-all">
+                            <span>+ Agregar</span>
+                        </button>
+                    </div>
+                    <div id="lista-variantes" class="space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- Pie fijo -->
+            <div class="shrink-0 flex gap-3 px-6 sm:px-7 py-4 border-t border-slate-100 bg-white">
+                <button type="button" onclick="cerrarFormulario()" class="w-1/3 py-3 rounded-xl font-bold uppercase text-xs tracking-wider text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" id="btn-guardar-producto" class="w-2/3 bg-obsidian text-white py-3 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-yellow-400 hover:text-black transition-all shadow-lg shadow-slate-900/10">
+                    Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script src="supabase-client.js"></script>
+    <script src="image-upload.js"></script>
+    <script src="dashboard.js"></script>
+    <script>
+        // ============================================================
+        // MENÚ HAMBURGUESA (MOBILE)
+        // ============================================================
+        function abrirSidebarMobile() {
+            document.getElementById('sidebar').classList.remove('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+        function cerrarSidebarMobile() {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('sidebar-overlay').classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+        // Si se agranda la ventana a desktop, aseguramos que quede todo limpio
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) cerrarSidebarMobile();
+        });
+    </script>
+</body>
+</html>
