@@ -1,5 +1,6 @@
 // ============================================================
-// PÁGINA DE PERFIL DE EMPRENDEDOR (emprendedor.html?id=...)
+// PÁGINA DE PERFIL DE EMPRENDEDOR (emprendedor.html?t=mi-tienda)
+// Se acepta también ?id=... (formato viejo, por links ya compartidos)
 // ============================================================
 
 let productos = [];           
@@ -51,26 +52,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     cargarCarritoDesdeStorage();
 
     const params = new URLSearchParams(window.location.search);
-    const emprendedorId = params.get('id');
+    const slugTienda = params.get('t');
+    const emprendedorIdLegacy = params.get('id'); // formato viejo, por links ya compartidos/impresos
 
-    if (!emprendedorId) {
+    if (!slugTienda && !emprendedorIdLegacy) {
         mostrarError();
         return;
     }
 
-    await cargarEmprendedor(emprendedorId);
+    await cargarEmprendedor(slugTienda, emprendedorIdLegacy);
 });
 
 // ============================================================
 // CARGA DE DATOS
 // ============================================================
-async function cargarEmprendedor(id) {
-    const { data: emprendedor, error } = await supabase
-        .from('emprendedores')
-        .select('*')
-        .eq('id', id)
-        .eq('activo', true)
-        .single();
+// Resuelve el emprendedor por su "usuario" (slug, link corto) o, si no
+// vino, por el "id" viejo (compatibilidad con links ya compartidos).
+async function cargarEmprendedor(slug, idLegacy) {
+    // OJO: para poder filtrar por una columna de la tabla embebida (usuarios.usuario)
+    // hace falta el "!inner" -- con un join normal, Postgrest no filtra las filas
+    // de "emprendedores" por ese eq, solo filtraría (sin efecto real) el array anidado.
+    let query = slug
+        ? supabase.from('emprendedores').select('*, usuarios!inner(usuario)').eq('usuarios.usuario', slug)
+        : supabase.from('emprendedores').select('*, usuarios(usuario)').eq('id', idLegacy);
+    query = query.eq('activo', true);
+
+    const { data: emprendedor, error } = await query.single();
 
     if (error || !emprendedor) {
         console.error(error);
@@ -78,6 +85,7 @@ async function cargarEmprendedor(id) {
         return;
     }
 
+    const id = emprendedor.id; // a partir de acá seguimos usando el UUID interno para el resto de las consultas
     emprendedorActual = emprendedor;
     renderPerfil(emprendedor);
 
@@ -111,7 +119,14 @@ function iniciarRealtimeEmprendedor(id) {
 
     const refrescarPerfil = debounce(async () => {
         const { data, error } = await supabase.from('emprendedores').select('*').eq('id', id).eq('activo', true).single();
-        if (error || !data) { mostrarError(); return; }
+        if (error || !data) {
+            mostrarError();
+            // La tienda se bloqueó: dejamos de escuchar cambios, ya no
+            // tiene sentido seguir gastando conexiones/requests en una
+            // página que quedó mostrando el cartel de error.
+            [canalProductos, canalEmprendedor, canalVariantes].forEach(c => c && supabase.removeChannel(c));
+            return;
+        }
         emprendedorActual = data;
         renderPerfil(data);
     }, 350);
@@ -129,9 +144,9 @@ function iniciarRealtimeEmprendedor(id) {
         actualizarPrecioYWhatsapp();
     }, 350);
 
-    suscribirTabla('productos', refrescarProductos, `emprendedor_id=eq.${id}`);
-    suscribirTabla('emprendedores', refrescarPerfil, `id=eq.${id}`);
-    suscribirTabla('variantes', refrescarVariantesModal);
+    const canalProductos = suscribirTabla('productos', refrescarProductos, `emprendedor_id=eq.${id}`);
+    const canalEmprendedor = suscribirTabla('emprendedores', refrescarPerfil, `id=eq.${id}`);
+    const canalVariantes = suscribirTabla('variantes', refrescarVariantesModal);
 }
 
 async function cargarProductosDelEmprendedor(emprendedorId) {
@@ -139,6 +154,7 @@ async function cargarProductosDelEmprendedor(emprendedorId) {
         .from('productos')
         .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, bio, medios_pago)')
         .eq('activo', true)
+        .eq('emprendedores.activo', true)
         .eq('emprendedor_id', emprendedorId)
         .order('created_at', { ascending: false });
 
@@ -152,7 +168,17 @@ async function cargarProductosDelEmprendedor(emprendedorId) {
 }
 
 function mostrarError() {
+    // Oculta TODO lo demás, no solo el spinner de carga -- si esto se
+    // dispara por Realtime (la tienda se bloqueó mientras alguien ya
+    // tenía la página abierta con el perfil y los productos pintados),
+    // hay que tapar eso también o queda el cartel de error arriba y el
+    // perfil visible abajo, como si nada.
+    // El banner (perfil-banner-wrap) vive FUERA de perfil-contenido en el
+    // HTML, así que hay que taparlo aparte o queda de fondo detrás del cartel.
     document.getElementById('perfil-cargando').classList.add('hidden');
+    document.getElementById('perfil-contenido').classList.add('hidden');
+    document.getElementById('seccion-productos').classList.add('hidden');
+    document.getElementById('perfil-banner-wrap').classList.add('hidden');
     document.getElementById('perfil-error').classList.remove('hidden');
 }
 
