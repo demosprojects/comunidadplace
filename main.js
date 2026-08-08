@@ -392,7 +392,7 @@ function iniciarRealtime() {
 async function cargarProductos() {
     const { data, error } = await supabase
         .from('productos')
-        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago)')
+        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago, usuarios(usuario))')
         .eq('activo', true)
         .eq('emprendedores.activo', true)
         .order('created_at', { ascending: false });
@@ -705,7 +705,7 @@ async function verDetalles(id) {
     const modalTienda = document.getElementById('modal-tienda');
     modalTienda.innerText = p.emprendedores ? p.emprendedores.nombre_tienda : '';
     modalTienda.onclick = () => abrirPerfilEmprendedor(p.emprendedores ? p.emprendedores.id : '');
-    document.getElementById('modal-desc').innerText = p.descripcion || '';
+    document.getElementById('modal-desc').innerText = p.descripcion || 'Sin descripción disponible.';
 
     renderMediosPagoModal(p);
 
@@ -885,7 +885,7 @@ async function abrirPerfilEmprendedor(emprendedorId) {
     if (!e) {
         const { data, error } = await supabase
             .from('emprendedores')
-            .select('*')
+            .select('*, usuarios(usuario)')
             .eq('id', emprendedorId)
             .eq('activo', true)
             .single();
@@ -979,8 +979,11 @@ async function abrirPerfilEmprendedor(emprendedorId) {
         textoBtnVerProductos.textContent = cantidadProductos > 0 ? 'Ver sus productos' : 'Ver perfil';
     }
     const btnVerProductos = document.getElementById('perfil-ver-productos');
+    const slugTienda = e.usuarios && e.usuarios.usuario;
     btnVerProductos.onclick = () => {
-        window.location.href = `emprendedor.html?id=${encodeURIComponent(emprendedorId)}`;
+        window.location.href = slugTienda
+            ? `emprendedor.html?t=${encodeURIComponent(slugTienda)}`
+            : `emprendedor.html?id=${encodeURIComponent(emprendedorId)}`; // fallback por si todavía no tiene "usuario" cargado
     };
 
     document.getElementById('modal-perfil').classList.remove('hidden');
