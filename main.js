@@ -23,6 +23,14 @@ let carrito = { emprendedorId: null, emprendedorNombre: '', emprendedorWhatsapp:
 let itemPendienteConflicto = null; // item que se intentó agregar y disparó el conflicto de tienda
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Si se entra desde el link directo de un producto (?producto=ID),
+    // el splash ya se mostró al instante desde el <script> inline en el
+    // <head>/<body>; acá lo "registramos" en el sistema de bloqueo de
+    // scroll y lo dejamos pendiente para abrir el modal más abajo.
+    const params = new URLSearchParams(window.location.search);
+    const productoIdDesdeLink = params.get('producto');
+    if (productoIdDesdeLink) mostrarSplashScreen();
+
     try {
         visitorId = obtenerVisitorId();
     } catch (e) {
@@ -53,6 +61,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
     aplicarFiltros();
+
+    // Si mientras el carrito estaba guardado (localStorage) el emprendedor
+    // desactivó algún producto o su tienda, lo marcamos como no disponible
+    // acá, antes de que el usuario pueda llegar a comprarlo.
+    sincronizarDisponibilidadCarrito();
+
+    // Recién con el catálogo cargado buscamos el producto del link y
+    // abrimos su modal; recién ahí se oculta el splash.
+    if (productoIdDesdeLink) await abrirProductoDesdeLink(productoIdDesdeLink);
 
     iniciarRealtime();
 
@@ -114,6 +131,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 });
+
+// ============================================================
+// SPLASH SCREEN (entrada desde el link directo de un producto)
+// ============================================================
+function mostrarSplashScreen() {
+    const splash = document.getElementById('splash-screen');
+    if (!splash) return;
+    splash.classList.remove('hidden', 'splash-oculto');
+    // bloquearScrollBody lleva la cuenta de bloqueos activos: si después
+    // también se abre el modal del producto, el scroll queda bloqueado
+    // sin cortes hasta que el usuario cierre ese modal.
+    bloquearScrollBody();
+}
+
+function ocultarSplashScreen() {
+    const splash = document.getElementById('splash-screen');
+    if (!splash || splash.classList.contains('hidden')) return;
+    splash.classList.add('splash-oculto');
+    desbloquearScrollBody();
+    setTimeout(() => splash.classList.add('hidden'), 500);
+}
+
+// Busca el producto del link (?producto=ID), le abre el modal de detalle
+// y recién ahí hace desaparecer el splash. Si no existe (borrado, pausado
+// o el catálogo no cargó), oculta el splash igual y avisa con un toast.
+async function abrirProductoDesdeLink(id) {
+    const existe = productos.find(p => p.id === id);
+    if (existe) {
+        await verDetalles(id);
+        ocultarSplashScreen();
+    } else {
+        ocultarSplashScreen();
+        mostrarToastCarrito('No pudimos abrir ese producto');
+    }
+}
 
 // ============================================================
 // CARGA DE DATOS
@@ -294,6 +346,10 @@ function iniciarRealtime() {
     const refrescarProductos = debounce(async () => {
         await cargarProductos();
         aplicarFiltros();
+        // Si el producto que se acaba de ocultar/borrar estaba en el
+        // carrito de alguien que sigue navegando, lo marcamos como no
+        // disponible al toque (no se saca solo, ver sincronizarDisponibilidadCarrito).
+        sincronizarDisponibilidadCarrito();
     }, 350);
 
     // Nuevo emprendedor, bloqueado/activado, o editó su perfil (nombre/logo)
@@ -302,6 +358,9 @@ function iniciarRealtime() {
         await cargarEmprendedoresFila();
         await cargarProductos();
         aplicarFiltros();
+        // Si la tienda se desactivó, sus productos quedan marcados como no
+        // disponibles en el carrito de quien los tuviera cargados.
+        sincronizarDisponibilidadCarrito();
     }, 350);
 
     // Categoría nueva/borrada/renombrada -> refresca el panel y las cards
@@ -389,25 +448,25 @@ function mostrarProductos(lista) {
             ? `<img src="${logoTienda}" alt="${escapeHtml(tienda)}" class="w-4 h-4 sm:w-6 sm:h-6 rounded-full object-cover flex-shrink-0 ring-1 ring-black/5">`
             : `<span class="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-yellow-400 text-black text-[7px] sm:text-[10px] font-black flex items-center justify-center flex-shrink-0">${escapeHtml(inicialTienda)}</span>`;
         return `
-            <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" onclick="verDetalles('${p.id}')">
-                <div class="relative aspect-[4/5] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
-                    <img src="${p.imagen_url || ''}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 transition duration-300">
-                    <div class="absolute top-1.5 sm:top-3 left-1.5 sm:left-3 flex gap-1 sm:gap-1.5">
+            <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl lg:rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" onclick="verDetalles('${p.id}')">
+                <div class="relative aspect-[4/5] lg:aspect-[4/3] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
+                    <img src="${p.imagen_url || ''}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 lg:p-3.5 transition duration-300">
+                    <div class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 flex gap-1 sm:gap-1.5">
                         ${esNuevo ? `<span class="bg-yellow-400 text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Nuevo</span>` : ''}
                         <span class="bg-white/90 backdrop-blur text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest truncate max-w-[70px] sm:max-w-none">${p.categorias ? escapeHtml(p.categorias.nombre) : 'General'}</span>
                     </div>
                 </div>
-                <div class="p-2.5 sm:p-5 flex flex-col flex-1">
+                <div class="p-2.5 sm:p-5 lg:p-3.5 flex flex-col flex-1">
                     <button onclick="event.stopPropagation(); abrirPerfilEmprendedor('${p.emprendedores ? p.emprendedores.id : ''}')"
-                        class="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 -ml-1 pl-1 pr-2.5 py-0.5 sm:py-1 rounded-full hover:bg-yellow-50 transition-colors group/tienda w-full text-left flex-shrink-0">
+                        class="flex items-center gap-1.5 sm:gap-2 lg:gap-1.5 mb-1.5 sm:mb-2 lg:mb-1 -ml-1 pl-1 pr-2.5 py-0.5 sm:py-1 rounded-full hover:bg-yellow-50 transition-colors group/tienda w-full text-left flex-shrink-0">
                         ${avatarTienda}
                         <span class="text-gray-500 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest group-hover/tienda:text-black truncate flex-1 transition-colors">${escapeHtml(tienda)}</span>
                         <span class="hidden sm:inline text-gray-300 group-hover/tienda:text-yellow-600 group-hover/tienda:translate-x-0.5 transition-all text-xs flex-shrink-0">›</span>
                     </button>
-                    <h3 class="font-black text-xs sm:text-lg leading-snug group-hover:text-yellow-600 transition-colors min-h-[2.4em] sm:min-h-[2.6em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
-                    <div class="flex items-center justify-between mt-auto pt-2 sm:pt-4">
-                        <span class="font-900 text-sm sm:text-xl">${formatoPrecio(p.precio)}</span>
-                        <span class="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-black text-white flex items-center justify-center text-xs sm:text-sm group-hover:bg-yellow-400 group-hover:text-black transition-all active:scale-90 flex-shrink-0">→</span>
+                    <h3 class="font-black text-xs sm:text-lg lg:text-sm leading-snug group-hover:text-yellow-600 transition-colors min-h-[2.4em] sm:min-h-[2.6em] lg:min-h-[2.4em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
+                    <div class="flex items-center justify-between mt-auto pt-2 sm:pt-4 lg:pt-2">
+                        <span class="font-900 text-sm sm:text-xl lg:text-base">${formatoPrecio(p.precio)}</span>
+                        <span class="w-7 h-7 sm:w-10 sm:h-10 lg:w-8 lg:h-8 rounded-full bg-black text-white flex items-center justify-center text-xs sm:text-sm group-hover:bg-yellow-400 group-hover:text-black transition-all active:scale-90 flex-shrink-0">→</span>
                     </div>
                 </div>
             </div>
@@ -813,14 +872,26 @@ function desbloquearScrollBody() {
 // ============================================================
 // MODAL DE PERFIL DEL EMPRENDEDOR
 // ============================================================
-function abrirPerfilEmprendedor(emprendedorId) {
+async function abrirPerfilEmprendedor(emprendedorId) {
     if (!emprendedorId) return;
 
     // Buscamos los datos del emprendedor entre los productos ya cargados
     // (todos vienen con el join a "emprendedores", así que no hace falta pedirlos de nuevo)
     const productoConDatos = productos.find(p => p.emprendedores && p.emprendedores.id === emprendedorId);
-    if (!productoConDatos) return;
-    const e = productoConDatos.emprendedores;
+    let e = productoConDatos ? productoConDatos.emprendedores : null;
+
+    // Si el emprendedor todavía no tiene productos cargados, no aparece en
+    // "productos" -> lo buscamos directo en Supabase para poder mostrar su perfil igual.
+    if (!e) {
+        const { data, error } = await supabase
+            .from('emprendedores')
+            .select('*')
+            .eq('id', emprendedorId)
+            .eq('activo', true)
+            .single();
+        if (error || !data) return;
+        e = data;
+    }
 
     // Banner de fondo (opcional)
     const bannerWrap = document.getElementById('perfil-banner-wrap');
@@ -862,7 +933,9 @@ function abrirPerfilEmprendedor(emprendedorId) {
     document.getElementById('perfil-bio').innerText = e.bio || 'Este emprendedor todavía no cargó una descripción.';
 
     const cantidadProductos = productos.filter(p => p.emprendedores && p.emprendedores.id === emprendedorId).length;
-    document.getElementById('perfil-cantidad').innerText = `${cantidadProductos} producto${cantidadProductos === 1 ? '' : 's'} en la comunidad`;
+    document.getElementById('perfil-cantidad').innerText = cantidadProductos > 0
+        ? `${cantidadProductos} producto${cantidadProductos === 1 ? '' : 's'} en la comunidad`
+        : 'Todavía sin productos cargados';
 
     // Ubicación + horario (solo se muestran si están cargados)
     const ubicacionWrap = document.getElementById('perfil-ubicacion-wrap');
@@ -899,6 +972,12 @@ function abrirPerfilEmprendedor(emprendedorId) {
         btnWsp.classList.add('opacity-40', 'pointer-events-none');
     }
 
+    // El botón siempre lleva al perfil completo del emprendedor; el texto
+    // cambia según si ya tiene productos publicados o no.
+    const textoBtnVerProductos = document.getElementById('perfil-ver-productos-texto');
+    if (textoBtnVerProductos) {
+        textoBtnVerProductos.textContent = cantidadProductos > 0 ? 'Ver sus productos' : 'Ver perfil';
+    }
     const btnVerProductos = document.getElementById('perfil-ver-productos');
     btnVerProductos.onclick = () => {
         window.location.href = `emprendedor.html?id=${encodeURIComponent(emprendedorId)}`;
@@ -941,6 +1020,48 @@ function guardarCarritoEnStorage() {
     localStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify(carrito));
 }
 
+// Marca (sin eliminar) los productos del carrito que ya no figuran en el
+// catálogo activo (el emprendedor los ocultó/borró, o desactivó su tienda
+// entera). El producto se queda en el carrito con un aviso de "no
+// disponible" y el botón de enviar pedido queda bloqueado: el usuario
+// tiene que eliminarlo a mano para poder seguir comprando.
+// `productos` siempre refleja lo que está activo AHORA (se recarga por
+// realtime y al iniciar), así que compararlo contra el carrito guardado
+// es suficiente para detectar productos que se volvieron no disponibles
+// mientras estaban en el carrito de alguien.
+function sincronizarDisponibilidadCarrito(mostrarAviso = true) {
+    if (carrito.items.length === 0) return [];
+
+    const idsActivos = new Set(productos.map(p => p.id));
+    const nuevosNoDisponibles = [];
+    let huboCambios = false;
+
+    carrito.items.forEach(item => {
+        const disponibleAhora = idsActivos.has(item.productoId);
+        if (!disponibleAhora && !item.noDisponible) {
+            item.noDisponible = true;
+            nuevosNoDisponibles.push(item);
+            huboCambios = true;
+        } else if (disponibleAhora && item.noDisponible) {
+            // El emprendedor lo reactivó: se puede volver a comprar.
+            item.noDisponible = false;
+            huboCambios = true;
+        }
+    });
+
+    if (huboCambios) {
+        guardarCarritoEnStorage();
+        actualizarBadgeCarrito();
+        renderCarrito();
+    }
+
+    return nuevosNoDisponibles;
+}
+
+function hayProductosNoDisponiblesEnCarrito() {
+    return carrito.items.some(i => i.noDisponible);
+}
+
 function modificarCantidadModal(delta) {
     cantidadModalActual = Math.max(1, cantidadModalActual + delta);
     document.getElementById('modal-cantidad').innerText = cantidadModalActual;
@@ -964,7 +1085,8 @@ function agregarAlCarrito() {
         imagen: p.imagen_url || '',
         precioUnitario,
         cantidad: cantidadModalActual,
-        variantesTexto
+        variantesTexto,
+        noDisponible: false
     };
 
     if (carrito.items.length === 0 || carrito.emprendedorId === p.emprendedores.id) {
@@ -1013,7 +1135,7 @@ function cerrarConflictoCarrito() {
 
 function modificarCantidadCarrito(key, delta) {
     const item = carrito.items.find(i => i.key === key);
-    if (!item) return;
+    if (!item || item.noDisponible) return;
     item.cantidad += delta;
     if (item.cantidad <= 0) {
         carrito.items = carrito.items.filter(i => i.key !== key);
@@ -1059,7 +1181,11 @@ function actualizarBadgeCarrito() {
 }
 
 function calcularTotalCarrito() {
-    return carrito.items.reduce((sum, i) => sum + i.precioUnitario * i.cantidad, 0);
+    // Los productos no disponibles no cuentan en el total: no se pueden
+    // comprar hasta que el usuario los saque del carrito.
+    return carrito.items
+        .filter(i => !i.noDisponible)
+        .reduce((sum, i) => sum + i.precioUnitario * i.cantidad, 0);
 }
 
 function renderCarrito() {
@@ -1076,9 +1202,38 @@ function renderCarrito() {
         subtitulo.innerText = 'Vacío';
         btnWsp.classList.add('opacity-40', 'pointer-events-none');
     } else {
+        const hayNoDisponibles = hayProductosNoDisponiblesEnCarrito();
         subtitulo.innerText = `De ${carrito.emprendedorNombre}`;
-        btnWsp.classList.remove('opacity-40', 'pointer-events-none');
-        cont.innerHTML = carrito.items.map(i => `
+
+        if (hayNoDisponibles) {
+            btnWsp.classList.add('opacity-40', 'pointer-events-none');
+        } else {
+            btnWsp.classList.remove('opacity-40', 'pointer-events-none');
+        }
+
+        const bannerNoDisponible = hayNoDisponibles ? `
+            <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-center">
+                <p class="text-[11px] font-bold text-red-500">⚠ Tenés productos que ya no están disponibles. Eliminalos del carrito para poder enviar tu pedido.</p>
+            </div>` : '';
+
+        cont.innerHTML = bannerNoDisponible + carrito.items.map(i => {
+            if (i.noDisponible) {
+                return `
+            <div class="flex gap-3 items-start border-b border-gray-100 pb-4 opacity-60">
+                <div class="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 grayscale">
+                    <img src="${i.imagen}" alt="${escapeHtml(i.nombre)}" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-sm leading-tight truncate line-through">${escapeHtml(i.nombre)}</p>
+                    ${i.variantesTexto ? `<p class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">${escapeHtml(i.variantesTexto)}</p>` : ''}
+                    <p class="text-[10px] font-black uppercase tracking-widest text-red-500 mt-1.5">No disponible</p>
+                    <button onclick="eliminarDelCarrito('${i.key}')" class="mt-2 text-[10px] font-black uppercase tracking-widest text-white bg-red-500 hover:bg-red-600 transition-colors rounded-full px-3 py-1.5">
+                        Eliminar del carrito
+                    </button>
+                </div>
+            </div>`;
+            }
+            return `
             <div class="flex gap-3 items-start border-b border-gray-100 pb-4">
                 <div class="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
                     <img src="${i.imagen}" alt="${escapeHtml(i.nombre)}" class="w-full h-full object-cover">
@@ -1096,14 +1251,18 @@ function renderCarrito() {
                     </div>
                 </div>
                 <button onclick="eliminarDelCarrito('${i.key}')" class="text-gray-300 hover:text-red-500 transition-colors text-lg leading-none flex-shrink-0">✕</button>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     }
 
     document.getElementById('carrito-total').innerText = formatoPrecio(calcularTotalCarrito());
 }
 
 function abrirCarrito() {
+    // Red de seguridad extra: si por lo que sea el realtime no llegó a
+    // tiempo, al menos acá, justo antes de mostrar el carrito, lo
+    // volvemos a validar contra el catálogo activo.
+    sincronizarDisponibilidadCarrito();
     renderCarrito();
     document.getElementById('carrito-overlay').classList.remove('hidden');
     document.getElementById('carrito-drawer').classList.remove('translate-x-full');
@@ -1130,18 +1289,57 @@ function mostrarToastCarrito(texto) {
 
 // Arma el mensaje con el detalle del pedido y abre WhatsApp directo al
 // número del emprendedor dueño del carrito (emprendedores.whatsapp en Supabase).
-function enviarPedidoWhatsapp() {
+async function enviarPedidoWhatsapp() {
     if (carrito.items.length === 0) return;
     if (!carrito.emprendedorWhatsapp) {
         alert('Este emprendedor todavía no cargó un número de WhatsApp para recibir pedidos.');
         return;
     }
 
+    // 1) Chequeo rápido contra la caché local `productos` (lo que sabemos
+    // que está activo ahora mismo en este navegador). Si algo se desactivó
+    // recién, se marca como no disponible (no se saca solo) y se frena el
+    // envío hasta que el usuario lo elimine a mano.
+    sincronizarDisponibilidadCarrito();
+    if (hayProductosNoDisponiblesEnCarrito()) {
+        return;
+    }
+
+    // 2) Chequeo final directo contra Supabase: por si el emprendedor
+    // desactivó algo en este mismo instante y el realtime todavía no
+    // llegó a actualizar la caché local. Si encontramos algo desactivado,
+    // lo marcamos como no disponible (queda en el carrito) y frenamos el
+    // envío para que el usuario lo elimine antes de mandar el pedido.
+    const idsCarrito = carrito.items.map(i => i.productoId);
+    const { data: vigentes, error: errorVigencia } = await supabase
+        .from('productos')
+        .select('id, activo, emprendedores!inner(activo)')
+        .in('id', idsCarrito);
+
+    if (!errorVigencia && vigentes) {
+        const idsVigentes = new Set(
+            vigentes.filter(p => p.activo && p.emprendedores && p.emprendedores.activo).map(p => p.id)
+        );
+        const desactivadosAhora = carrito.items.filter(i => !idsVigentes.has(i.productoId));
+        if (desactivadosAhora.length > 0) {
+            desactivadosAhora.forEach(i => { i.noDisponible = true; });
+            guardarCarritoEnStorage();
+            actualizarBadgeCarrito();
+            renderCarrito();
+            return;
+        }
+    }
+    // Si hubo un error de red al validar, seguimos igual: no queremos
+    // bloquear el pedido por un problema de conexión momentáneo.
+
+    const baseUrl = `${window.location.origin}${window.location.pathname}`;
+
     let msg = `Hola ${carrito.emprendedorNombre}! Quiero hacer este pedido desde ComunidadPlace:\n\n`;
     carrito.items.forEach((i, idx) => {
         msg += `${idx + 1}. ${i.nombre}`;
         if (i.variantesTexto) msg += ` (${i.variantesTexto})`;
         msg += ` x${i.cantidad} - ${formatoPrecio(i.precioUnitario * i.cantidad)}\n`;
+        if (i.productoId) msg += `   ${baseUrl}?producto=${i.productoId}\n`;
     });
     msg += `\nTotal: ${formatoPrecio(calcularTotalCarrito())}`;
 
