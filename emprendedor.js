@@ -83,6 +83,9 @@ async function cargarEmprendedor(id) {
 
     await cargarProductosDelEmprendedor(id);
     aplicarBusqueda();
+    // Si alguien tenía en el carrito un producto de esta tienda que
+    // mientras tanto se desactivó, lo marcamos como no disponible.
+    sincronizarDisponibilidadCarrito();
 
     document.getElementById('perfil-cargando').classList.add('hidden');
     document.getElementById('perfil-contenido').classList.remove('hidden');
@@ -101,6 +104,9 @@ function iniciarRealtimeEmprendedor(id) {
     const refrescarProductos = debounce(async () => {
         await cargarProductosDelEmprendedor(id);
         aplicarBusqueda();
+        // Si un producto de esta tienda que alguien tenía en el carrito
+        // se desactivó, lo marcamos como no disponible (no se saca solo).
+        sincronizarDisponibilidadCarrito();
     }, 350);
 
     const refrescarPerfil = debounce(async () => {
@@ -265,13 +271,25 @@ function mostrarProductos(lista) {
     contenedor.innerHTML = "";
 
     if (lista.length === 0) {
+        const nombreTienda = escapeHtml((emprendedorActual && emprendedorActual.nombre_tienda) || 'Esta tienda');
         contenedor.innerHTML = `
-            <div class="col-span-full flex flex-col items-center justify-center text-center py-20">
-                <svg class="w-10 h-10 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-                    <circle cx="10.5" cy="10.5" r="6.5"/>
-                    <path stroke-linecap="round" d="M20 20l-4.8-4.8"/>
-                </svg>
-                <p class="text-gray-500 font-bold">Este emprendedor todavía no tiene productos cargados.</p>
+            <div class="col-span-full flex flex-col items-center justify-center text-center py-16 sm:py-24 px-4 animate-fade-in">
+                <div class="relative mb-6">
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center shadow-xl rotate-3">
+                        <svg class="w-9 h-9 sm:w-10 sm:h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <span class="absolute -bottom-2 -right-2 w-9 h-9 rounded-full bg-black text-yellow-400 flex items-center justify-center text-base border-4 border-white shadow-lg -rotate-6">⏳</span>
+                </div>
+                <h3 class="text-xl sm:text-2xl font-900 uppercase italic text-zinc-900 leading-tight">Todavía sin productos</h3>
+                <p class="text-gray-500 text-sm sm:text-base max-w-sm mt-2.5 leading-relaxed">
+                    ${nombreTienda} está preparando su catálogo. Volvé pronto o mientras tanto descubrí otras tiendas de la comunidad.
+                </p>
+                <a href="index.html#contenedor-productos" class="inline-flex items-center gap-2 mt-7 bg-black text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl">
+                    Explorar otras tiendas
+                    <span>→</span>
+                </a>
             </div>`;
         return;
     }
@@ -279,19 +297,19 @@ function mostrarProductos(lista) {
     contenedor.innerHTML = lista.map(p => {
         const esNuevo = p.created_at ? (Date.now() - new Date(p.created_at).getTime()) < (7 * 24 * 60 * 60 * 1000) : false;
         return `
-            <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" onclick="verDetalles('${p.id}')">
-                <div class="relative aspect-[4/5] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
-                    <img src="${p.imagen_url || ''}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 transition duration-300">
-                    <div class="absolute top-1.5 sm:top-3 left-1.5 sm:left-3 flex gap-1 sm:gap-1.5">
+            <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl lg:rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" onclick="verDetalles('${p.id}')">
+                <div class="relative aspect-[4/5] lg:aspect-[4/3] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
+                    <img src="${p.imagen_url || ''}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 lg:p-3.5 transition duration-300">
+                    <div class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 flex gap-1 sm:gap-1.5">
                         ${esNuevo ? `<span class="bg-yellow-400 text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Nuevo</span>` : ''}
                         <span class="bg-white/90 backdrop-blur text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest truncate max-w-[70px] sm:max-w-none">${p.categorias ? escapeHtml(p.categorias.nombre) : 'General'}</span>
                     </div>
                 </div>
-                <div class="p-2.5 sm:p-5 flex flex-col flex-1">
-                    <h3 class="font-black text-xs sm:text-lg leading-snug group-hover:text-yellow-600 transition-colors min-h-[2.4em] sm:min-h-[2.6em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
-                    <div class="flex items-center justify-between mt-auto pt-2 sm:pt-4">
-                        <span class="font-900 text-sm sm:text-xl">${formatoPrecio(p.precio)}</span>
-                        <span class="w-7 h-7 sm:w-10 sm:h-10 rounded-full bg-black text-white flex items-center justify-center text-xs sm:text-sm group-hover:bg-yellow-400 group-hover:text-black transition-all active:scale-90 flex-shrink-0">→</span>
+                <div class="p-2.5 sm:p-5 lg:p-3.5 flex flex-col flex-1">
+                    <h3 class="font-black text-xs sm:text-lg lg:text-sm leading-snug group-hover:text-yellow-600 transition-colors min-h-[2.4em] sm:min-h-[2.6em] lg:min-h-[2.4em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
+                    <div class="flex items-center justify-between mt-auto pt-2 sm:pt-4 lg:pt-2">
+                        <span class="font-900 text-sm sm:text-xl lg:text-base">${formatoPrecio(p.precio)}</span>
+                        <span class="w-7 h-7 sm:w-10 sm:h-10 lg:w-8 lg:h-8 rounded-full bg-black text-white flex items-center justify-center text-xs sm:text-sm group-hover:bg-yellow-400 group-hover:text-black transition-all active:scale-90 flex-shrink-0">→</span>
                     </div>
                 </div>
             </div>
@@ -470,6 +488,47 @@ function guardarCarritoEnStorage() {
     localStorage.setItem(CARRITO_STORAGE_KEY, JSON.stringify(carrito));
 }
 
+// Marca (sin eliminar) los productos del carrito que ya no figuran en el
+// catálogo activo de ESTE emprendedor. El producto se queda en el carrito
+// con un aviso de "no disponible" y el botón de enviar pedido queda
+// bloqueado: el usuario tiene que eliminarlo a mano para poder seguir.
+// Esta página sólo conoce los productos del emprendedor que se está
+// viendo, así que si el carrito es de otro emprendedor no lo tocamos acá
+// (se valida en la página que corresponda).
+function sincronizarDisponibilidadCarrito(mostrarAviso = true) {
+    if (carrito.items.length === 0) return [];
+    if (!emprendedorActual || carrito.emprendedorId !== emprendedorActual.id) return [];
+
+    const idsActivos = new Set(productos.map(p => p.id));
+    const nuevosNoDisponibles = [];
+    let huboCambios = false;
+
+    carrito.items.forEach(item => {
+        const disponibleAhora = idsActivos.has(item.productoId);
+        if (!disponibleAhora && !item.noDisponible) {
+            item.noDisponible = true;
+            nuevosNoDisponibles.push(item);
+            huboCambios = true;
+        } else if (disponibleAhora && item.noDisponible) {
+            // El emprendedor lo reactivó: se puede volver a comprar.
+            item.noDisponible = false;
+            huboCambios = true;
+        }
+    });
+
+    if (huboCambios) {
+        guardarCarritoEnStorage();
+        actualizarBadgeCarrito();
+        renderCarrito();
+    }
+
+    return nuevosNoDisponibles;
+}
+
+function hayProductosNoDisponiblesEnCarrito() {
+    return carrito.items.some(i => i.noDisponible);
+}
+
 function agregarAlCarrito() {
     const p = productoModalActual;
     if (!p || !p.emprendedores) return;
@@ -486,7 +545,8 @@ function agregarAlCarrito() {
         imagen: p.imagen_url || '',
         precioUnitario,
         cantidad: cantidadModalActual,
-        variantesTexto
+        variantesTexto,
+        noDisponible: false
     };
 
     if (carrito.items.length === 0 || carrito.emprendedorId === p.emprendedores.id) {
@@ -535,7 +595,7 @@ function cerrarConflictoCarrito() {
 
 function modificarCantidadCarrito(key, delta) {
     const item = carrito.items.find(i => i.key === key);
-    if (!item) return;
+    if (!item || item.noDisponible) return;
     item.cantidad += delta;
     if (item.cantidad <= 0) {
         carrito.items = carrito.items.filter(i => i.key !== key);
@@ -581,7 +641,11 @@ function actualizarBadgeCarrito() {
 }
 
 function calcularTotalCarrito() {
-    return carrito.items.reduce((sum, i) => sum + i.precioUnitario * i.cantidad, 0);
+    // Los productos no disponibles no cuentan en el total: no se pueden
+    // comprar hasta que el usuario los saque del carrito.
+    return carrito.items
+        .filter(i => !i.noDisponible)
+        .reduce((sum, i) => sum + i.precioUnitario * i.cantidad, 0);
 }
 
 function renderCarrito() {
@@ -598,9 +662,38 @@ function renderCarrito() {
         subtitulo.innerText = 'Vacío';
         btnWsp.classList.add('opacity-40', 'pointer-events-none');
     } else {
+        const hayNoDisponibles = hayProductosNoDisponiblesEnCarrito();
         subtitulo.innerText = `De ${carrito.emprendedorNombre}`;
-        btnWsp.classList.remove('opacity-40', 'pointer-events-none');
-        cont.innerHTML = carrito.items.map(i => `
+
+        if (hayNoDisponibles) {
+            btnWsp.classList.add('opacity-40', 'pointer-events-none');
+        } else {
+            btnWsp.classList.remove('opacity-40', 'pointer-events-none');
+        }
+
+        const bannerNoDisponible = hayNoDisponibles ? `
+            <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-center">
+                <p class="text-[11px] font-bold text-red-500">⚠ Tenés productos que ya no están disponibles. Eliminalos del carrito para poder enviar tu pedido.</p>
+            </div>` : '';
+
+        cont.innerHTML = bannerNoDisponible + carrito.items.map(i => {
+            if (i.noDisponible) {
+                return `
+            <div class="flex gap-3 items-start border-b border-gray-100 pb-4 opacity-60">
+                <div class="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 grayscale">
+                    <img src="${i.imagen}" alt="${escapeHtml(i.nombre)}" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-bold text-sm leading-tight truncate line-through">${escapeHtml(i.nombre)}</p>
+                    ${i.variantesTexto ? `<p class="text-[10px] text-gray-400 uppercase tracking-widest mt-0.5">${escapeHtml(i.variantesTexto)}</p>` : ''}
+                    <p class="text-[10px] font-black uppercase tracking-widest text-red-500 mt-1.5">No disponible</p>
+                    <button onclick="eliminarDelCarrito('${i.key}')" class="mt-2 text-[10px] font-black uppercase tracking-widest text-white bg-red-500 hover:bg-red-600 transition-colors rounded-full px-3 py-1.5">
+                        Eliminar del carrito
+                    </button>
+                </div>
+            </div>`;
+            }
+            return `
             <div class="flex gap-3 items-start border-b border-gray-100 pb-4">
                 <div class="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0">
                     <img src="${i.imagen}" alt="${escapeHtml(i.nombre)}" class="w-full h-full object-cover">
@@ -618,14 +711,18 @@ function renderCarrito() {
                     </div>
                 </div>
                 <button onclick="eliminarDelCarrito('${i.key}')" class="text-gray-300 hover:text-red-500 transition-colors text-lg leading-none flex-shrink-0">✕</button>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     }
 
     document.getElementById('carrito-total').innerText = formatoPrecio(calcularTotalCarrito());
 }
 
 function abrirCarrito() {
+    // Red de seguridad extra: si por lo que sea el realtime no llegó a
+    // tiempo, al menos acá, justo antes de mostrar el carrito, lo
+    // volvemos a validar contra el catálogo activo de este emprendedor.
+    sincronizarDisponibilidadCarrito();
     renderCarrito();
     document.getElementById('carrito-overlay').classList.remove('hidden');
     document.getElementById('carrito-drawer').classList.remove('translate-x-full');
@@ -650,12 +747,48 @@ function mostrarToastCarrito(texto) {
     }, 2600);
 }
 
-function enviarPedidoWhatsapp() {
+async function enviarPedidoWhatsapp() {
     if (carrito.items.length === 0) return;
     if (!carrito.emprendedorWhatsapp) {
         alert('Este emprendedor todavía no cargó un número de WhatsApp para recibir pedidos.');
         return;
     }
+
+    // 1) Chequeo rápido contra la caché local `productos` de esta tienda
+    // (sólo aplica si el carrito es de este mismo emprendedor). Si algo
+    // se desactivó recién, se marca como no disponible y se frena el
+    // envío hasta que el usuario lo elimine a mano.
+    sincronizarDisponibilidadCarrito();
+    if (hayProductosNoDisponiblesEnCarrito()) {
+        return;
+    }
+
+    // 2) Chequeo final directo contra Supabase: por si el emprendedor
+    // desactivó algo en este mismo instante y el realtime todavía no
+    // llegó a actualizar la caché local. Si encontramos algo desactivado,
+    // lo marcamos como no disponible (queda en el carrito) y frenamos el
+    // envío para que el usuario lo elimine antes de mandar el pedido.
+    const idsCarrito = carrito.items.map(i => i.productoId);
+    const { data: vigentes, error: errorVigencia } = await supabase
+        .from('productos')
+        .select('id, activo, emprendedores!inner(activo)')
+        .in('id', idsCarrito);
+
+    if (!errorVigencia && vigentes) {
+        const idsVigentes = new Set(
+            vigentes.filter(p => p.activo && p.emprendedores && p.emprendedores.activo).map(p => p.id)
+        );
+        const desactivadosAhora = carrito.items.filter(i => !idsVigentes.has(i.productoId));
+        if (desactivadosAhora.length > 0) {
+            desactivadosAhora.forEach(i => { i.noDisponible = true; });
+            guardarCarritoEnStorage();
+            actualizarBadgeCarrito();
+            renderCarrito();
+            return;
+        }
+    }
+    // Si hubo un error de red al validar, seguimos igual: no queremos
+    // bloquear el pedido por un problema de conexión momentáneo.
 
     let msg = `Hola ${carrito.emprendedorNombre}! Quiero hacer este pedido desde ComunidadPlace:\n\n`;
     carrito.items.forEach((i, idx) => {
