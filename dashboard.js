@@ -36,7 +36,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 // cambia el listado de categorías) desde otra pestaña, se refleja solo
 // ============================================================
 function iniciarRealtimeDashboard() {
-    const refrescarProductos = debounce(renderProductos, 350);
+    // OJO: "debounce(renderProductos, 350)" se ve inocente, pero rompe algo sutil:
+    // Supabase Realtime llama al callback con el payload del cambio como argumento,
+    // y ese payload (un objeto, siempre truthy) terminaba cayendo en el parámetro
+    // "mostrarSpinner" de renderProductos -> disparaba el spinner en cada refresco
+    // por Realtime, incluso cuando el cambio lo habíamos hecho nosotros mismos acá
+    // (toggle, editar, eliminar). Envolviendo en una función sin argumentos evitamos
+    // que ese payload se filtre.
+    const refrescarProductos = debounce(() => renderProductos(), 350);
 
     const refrescarCategorias = debounce(async () => {
         const seleccionActual = selectCategoria.value;
@@ -265,7 +272,7 @@ async function manejarSeleccionImagenProducto(event) {
 
     const errorValidacion = validarImagenSeleccionada(file);
     if (errorValidacion) {
-        alert(errorValidacion);
+        mostrarToast(errorValidacion, 'error');
         event.target.value = '';
         return;
     }
@@ -276,11 +283,12 @@ async function manejarSeleccionImagenProducto(event) {
         const url = await subirImagenProductoSupabase(file, perfilActual.id);
         document.getElementById('imagen').value = url;
         actualizarPreviewImagenProducto(url);
-        // Si estábamos reemplazando una foto subida por este mismo sistema, borramos la vieja
-        if (urlAnterior) borrarImagenProductoSupabase(urlAnterior);
+        // Si estábamos reemplazando una foto subida por este mismo sistema, borramos la
+        // vieja (nunca la default, que es compartida por todos los productos sin foto)
+        if (urlAnterior && urlAnterior !== IMAGEN_PRODUCTO_DEFAULT) borrarImagenProductoSupabase(urlAnterior);
     } catch (err) {
         console.error(err);
-        alert('No se pudo subir la imagen. Probá de nuevo.');
+        mostrarToast('No se pudo subir la imagen. Probá de nuevo.', 'error');
     } finally {
         mostrarSpinnerImagen('imagen-producto', false);
         event.target.value = '';
@@ -294,7 +302,7 @@ function mostrarSpinnerImagen(prefijo, mostrar) {
 
 async function editarProducto(id) {
     const { data: p, error } = await supabase.from('productos').select('*').eq('id', id).single();
-    if (error) { alert('No se pudo cargar el producto.'); return; }
+    if (error) { mostrarToast('No se pudo cargar el producto.', 'error'); return; }
 
     const { data: vs } = await supabase.from('variantes').select('*').eq('producto_id', id);
 
@@ -402,11 +410,9 @@ function renderVariantes() {
 form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const imagenUrl = document.getElementById('imagen').value.trim();
-    if (!imagenUrl) {
-        alert('Subí una foto del producto antes de guardar.');
-        return;
-    }
+    // La imagen es opcional: si no subieron ninguna, usamos una foto
+    // genérica para que la card del producto no quede vacía/rota.
+    const imagenUrl = document.getElementById('imagen').value.trim() || IMAGEN_PRODUCTO_DEFAULT;
 
     const btn = document.getElementById('btn-guardar-producto');
     btn.disabled = true;
@@ -454,10 +460,11 @@ form.addEventListener('submit', async (e) => {
 
         cerrarFormulario();
         await renderProductos();
+        mostrarToast(productoEditandoId ? 'Producto actualizado.' : 'Producto creado.', 'success');
 
     } catch (err) {
         console.error(err);
-        alert('Ocurrió un error guardando el producto.');
+        mostrarToast('Ocurrió un error guardando el producto.', 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Guardar';
@@ -465,9 +472,34 @@ form.addEventListener('submit', async (e) => {
 });
 
 async function eliminarProducto(id) {
-    if (!confirm('¿Seguro que quieres eliminar este producto? También se eliminarán sus variantes.')) return;
+    const confirmado = await confirmarAccion(
+        'También se eliminarán sus variantes.',
+        { titulo: '¿Eliminar este producto?', textoConfirmar: 'Eliminar' }
+    );
+    if (!confirmado) return;
+
+    // Guardamos la imagen antes de borrar la fila, porque después de eliminada
+    // ya no vamos a poder consultarla. Comparamos como string porque "id" llega
+    // como string (viene del atributo onclick) y en el cache puede ser numérico.
+    const producto = productosCache.find(p => String(p.id) === String(id));
+    const imagenUrl = producto?.imagen_url;
+
     const { error } = await supabase.from('productos').delete().eq('id', id);
-    if (error) { alert('No se pudo eliminar el producto.'); console.error(error); return; }
+    if (error) { mostrarToast('No se pudo eliminar el producto.', 'error'); console.error(error); return; }
+
+    // Borramos también la imagen del storage para no dejar archivos huérfanos
+    // ocupando espacio. Es silencioso a propósito: si falla, no le suma nada
+    // al usuario saberlo (el producto ya se eliminó igual). Ojo: nunca borramos
+    // la foto default, porque es compartida por todos los productos sin imagen.
+    if (imagenUrl && imagenUrl !== IMAGEN_PRODUCTO_DEFAULT) {
+        try {
+            await borrarImagenProductoSupabase(imagenUrl);
+        } catch (err) {
+            console.error('No se pudo borrar la imagen del producto eliminado:', err);
+        }
+    }
+
+    mostrarToast('Producto eliminado.', 'success');
     await renderProductos();
 }
 
@@ -478,12 +510,12 @@ async function eliminarProducto(id) {
 async function toggleActivoProducto(id, activoActual) {
     const nuevoEstado = !activoActual;
     const { error } = await supabase.from('productos').update({ activo: nuevoEstado }).eq('id', id);
-    if (error) { alert('No se pudo actualizar la visibilidad del producto.'); console.error(error); return; }
+    if (error) { mostrarToast('No se pudo actualizar la visibilidad del producto.', 'error'); console.error(error); return; }
 
     // Actualizamos el estado en memoria y repintamos al toque, sin volver
     // a pedirle la lista completa a Supabase (eso evita el parpadeo/spinner
     // que daba sensación de que la página se recargaba).
-    const item = productosCache.find(p => p.id === id);
+    const item = productosCache.find(p => String(p.id) === String(id));
     if (item) item.activo = nuevoEstado;
     pintarGridProductos();
 }
@@ -543,7 +575,7 @@ async function manejarSeleccionLogo(event) {
 
     const errorValidacion = validarImagenSeleccionada(file);
     if (errorValidacion) {
-        alert(errorValidacion);
+        mostrarToast(errorValidacion, 'error');
         event.target.value = '';
         return;
     }
@@ -556,7 +588,7 @@ async function manejarSeleccionLogo(event) {
         actualizarTarjetaCuentaSidebar(document.getElementById('p-nombre').value, url);
     } catch (err) {
         console.error(err);
-        alert('No se pudo subir el logo. Probá de nuevo.');
+        mostrarToast('No se pudo subir el logo. Probá de nuevo.', 'error');
     } finally {
         mostrarSpinnerImagen('p-logo', false);
         event.target.value = '';
@@ -569,7 +601,7 @@ async function manejarSeleccionBanner(event) {
 
     const errorValidacion = validarImagenSeleccionada(file);
     if (errorValidacion) {
-        alert(errorValidacion);
+        mostrarToast(errorValidacion, 'error');
         event.target.value = '';
         return;
     }
@@ -581,7 +613,7 @@ async function manejarSeleccionBanner(event) {
         actualizarPreviewBanner(url);
     } catch (err) {
         console.error(err);
-        alert('No se pudo subir el banner. Probá de nuevo.');
+        mostrarToast('No se pudo subir el banner. Probá de nuevo.', 'error');
     } finally {
         mostrarSpinnerImagen('p-banner', false);
         event.target.value = '';
