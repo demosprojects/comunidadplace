@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel Admin | Comunidad Place</title>
+    <link rel="shortcut icon" href="foco-nuevo-rem.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -202,10 +203,11 @@
         <div class="absolute inset-0 bg-obsidian/70 backdrop-blur-md transition-opacity" onclick="cerrarModalCategoria()"></div>
         
         <form id="form-categoria" class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 relative z-10 shadow-2xl border border-white/20 animate-fade-in">
+            <input type="hidden" id="cat-id" value="">
             <div class="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
                 <div>
-                    <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight">Nueva categoría</h2>
-                    <p class="text-xs text-slate-400 mt-0.5">Ingresá el nombre que aparecerá en la tienda</p>
+                    <h2 id="modal-categoria-titulo" class="text-xl font-extrabold text-slate-900 uppercase tracking-tight">Nueva categoría</h2>
+                    <p id="modal-categoria-subtitulo" class="text-xs text-slate-400 mt-0.5">Ingresá el nombre que aparecerá en la tienda</p>
                 </div>
                 <button type="button" onclick="cerrarModalCategoria()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition">
                     ✕
@@ -221,7 +223,7 @@
                 <button type="button" onclick="cerrarModalCategoria()" class="w-1/3 py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors">
                     Cancelar
                 </button>
-                <button type="submit" class="w-2/3 bg-obsidian text-white py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-yellow-400 hover:text-black transition-all shadow-lg shadow-slate-900/10">
+                <button type="submit" id="btn-guardar-categoria" class="w-2/3 bg-obsidian text-white py-3.5 rounded-xl font-bold uppercase text-xs tracking-wider hover:bg-yellow-400 hover:text-black transition-all shadow-lg shadow-slate-900/10">
                     Guardar
                 </button>
             </div>
