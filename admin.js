@@ -101,7 +101,8 @@ async function cargarEmprendedores() {
 
 async function toggleEmprendedor(id, activoActual) {
     const { error } = await supabase.from('emprendedores').update({ activo: !activoActual }).eq('id', id);
-    if (error) { alert('No se pudo actualizar el estado.'); console.error(error); return; }
+    if (error) { mostrarToast('No se pudo actualizar el estado.', 'error'); console.error(error); return; }
+    mostrarToast(activoActual ? 'Emprendedor bloqueado.' : 'Emprendedor activado.', 'success');
     await cargarEmprendedores();
 }
 
@@ -127,39 +128,79 @@ async function cargarCategoriasAdmin() {
                 <p class="font-extrabold text-slate-900 truncate">${escapeHtml(c.nombre)}</p>
                 <p class="text-xs text-slate-400 truncate">${escapeHtml(c.slug)}</p>
             </div>
-            <button onclick="eliminarCategoria(${c.id})" class="shrink-0 text-red-400 hover:text-red-600 font-black text-[10px] uppercase tracking-widest transition-colors">Eliminar</button>
+            <div class="flex items-center gap-3 shrink-0">
+                <button onclick="editarCategoria(${c.id})" class="text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest transition-colors">Editar</button>
+                <button onclick="eliminarCategoria(${c.id})" class="text-red-400 hover:text-red-600 font-black text-[10px] uppercase tracking-widest transition-colors">Eliminar</button>
+            </div>
         </div>
     `).join('');
 }
 
-function abrirModalCategoria() {
-    document.getElementById('form-categoria').reset();
+// "categoria" es opcional: si se pasa, el modal entra en modo edición
+// precargado con esos datos; si no, abre en modo creación.
+function abrirModalCategoria(categoria = null) {
+    const form = document.getElementById('form-categoria');
+    form.reset();
+
+    document.getElementById('cat-id').value = categoria ? categoria.id : '';
+    document.getElementById('modal-categoria-titulo').textContent = categoria ? 'Editar categoría' : 'Nueva categoría';
+    document.getElementById('modal-categoria-subtitulo').textContent = categoria
+        ? 'Modificá el nombre de la categoría'
+        : 'Ingresá el nombre que aparecerá en la tienda';
+    document.getElementById('btn-guardar-categoria').textContent = categoria ? 'Guardar cambios' : 'Guardar';
+
+    if (categoria) document.getElementById('cat-nombre').value = categoria.nombre;
+
     document.getElementById('modal-categoria').classList.remove('hidden');
+    document.getElementById('cat-nombre').focus();
 }
 function cerrarModalCategoria() {
     document.getElementById('modal-categoria').classList.add('hidden');
 }
 
+async function editarCategoria(id) {
+    const { data, error } = await supabase.from('categorias').select('*').eq('id', id).single();
+    if (error || !data) { mostrarToast('No se pudo cargar la categoría.', 'error'); return; }
+    abrirModalCategoria(data);
+}
+
 document.getElementById('form-categoria').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const id = document.getElementById('cat-id').value;
     const nombre = document.getElementById('cat-nombre').value.trim();
     const slug = nombre.toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // saca tildes
         .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-    const { error } = await supabase.from('categorias').insert({ nombre, slug });
+    const btnGuardar = document.getElementById('btn-guardar-categoria');
+    btnGuardar.disabled = true;
+
+    const { error } = id
+        ? await supabase.from('categorias').update({ nombre, slug }).eq('id', id)
+        : await supabase.from('categorias').insert({ nombre, slug });
+
+    btnGuardar.disabled = false;
+
     if (error) {
-        alert(error.message.includes('duplicate') ? 'Esa categoría ya existe.' : 'No se pudo crear la categoría.');
+        mostrarToast(error.message.includes('duplicate') ? 'Esa categoría ya existe.' : 'No se pudo guardar la categoría.', 'error');
         return;
     }
+
+    mostrarToast(id ? 'Categoría actualizada.' : 'Categoría creada.', 'success');
     cerrarModalCategoria();
     await cargarCategoriasAdmin();
 });
 
 async function eliminarCategoria(id) {
-    if (!confirm('¿Eliminar esta categoría? Los productos que la usan quedarán sin categoría.')) return;
+    const confirmado = await confirmarAccion(
+        'Los productos que la usan quedarán sin categoría.',
+        { titulo: '¿Eliminar esta categoría?', textoConfirmar: 'Eliminar' }
+    );
+    if (!confirmado) return;
+
     const { error } = await supabase.from('categorias').delete().eq('id', id);
-    if (error) { alert('No se pudo eliminar.'); return; }
+    if (error) { mostrarToast('No se pudo eliminar la categoría.', 'error'); return; }
+    mostrarToast('Categoría eliminada.', 'success');
     await cargarCategoriasAdmin();
 }
 
@@ -201,9 +242,15 @@ async function cargarProductosAdmin() {
 }
 
 async function eliminarProductoAdmin(id) {
-    if (!confirm('¿Eliminar este producto de la plataforma?')) return;
+    const confirmado = await confirmarAccion(
+        'Esta acción no se puede deshacer.',
+        { titulo: '¿Eliminar este producto de la plataforma?', textoConfirmar: 'Eliminar' }
+    );
+    if (!confirmado) return;
+
     const { error } = await supabase.from('productos').delete().eq('id', id);
-    if (error) { alert('No se pudo eliminar.'); return; }
+    if (error) { mostrarToast('No se pudo eliminar el producto.', 'error'); return; }
+    mostrarToast('Producto eliminado.', 'success');
     await cargarProductosAdmin();
 }
 
