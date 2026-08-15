@@ -3,6 +3,23 @@ var SUPABASE_ANON_KEY = "sb_publishable_eMPALOR2u8FrIrKM2NMRVA_zXKYaV9o";
 
 var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ------------------------------------------------------------
+// DOMINIO PÚBLICO DEL SITIO
+// ------------------------------------------------------------
+// Los paneles de administración (dashboard, admin) viven en un dominio
+// distinto (Vercel) al del sitio público (Cloudflare Pages), donde están
+// alojados emprendedor.html y verificar.html. Por eso, cualquier link que
+// se genere para un QR NO puede armarse con window.location.origin (eso
+// daría el dominio del panel, no el del sitio público) — hay que usar
+// esta constante fija.
+//
+// >>> CUANDO TENGAS EL DOMINIO FINAL CONECTADO <<<
+// Cambiá SOLO el valor de acá abajo por "https://comunidademprendedora.com.ar"
+// (sin barra al final) y listo: todos los QR que se generen desde ese
+// momento van a apuntar al dominio nuevo. No hace falta tocar ningún
+// otro archivo.
+var SITIO_PUBLICO = "https://comunidadplace.pages.dev";
+
 const IMAGEN_PRODUCTO_DEFAULT = "https://res.cloudinary.com/dl2tftoum/image/upload/v1786256135/d5q4mgovgeaev2xkt3rq.webp";
 
 // ------------------------------------------------------------
