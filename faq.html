@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preguntas Frecuentes - Comunidad Emprendedora</title>
+    <link rel="shortcut icon" href="foco-nuevo-rem.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .bg-yellow-comunidad { background-color: #FBBF24; }
+        .text-yellow-comunidad { color: #FBBF24; }
+        
+        /* Estilos para el acordeón coordinados con app.js */
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+        }
+        .faq-item.active i {
+            transform: rotate(180deg);
+        }
+        .faq-item.active {
+            border-color: #FBBF24;
+            ring: 1px;
+            ring-color: #FBBF24;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 flex flex-col min-h-screen">
+
+    <nav class="bg-white border-b border-slate-100 py-4 sticky top-0 z-50">
+        <div class="container mx-auto px-6 flex items-center justify-between">
+            <a href="index.html" class="flex items-center gap-2 font-black text-sm md:text-base hover:opacity-70 transition">
+                <i class="fas fa-chevron-left text-yellow-comunidad"></i>
+                VOLVER AL INICIO
+            </a>
+            <img src="foco-nuevo-rem.png" alt="Logo" class="w-8 h-8">
+        </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-6 py-12 md:py-20 max-w-4xl">
+        <header class="text-center mb-16">
+            <h1 class="text-3xl md:text-5xl font-black mb-4 uppercase tracking-tighter">
+                Preguntas <span class="text-yellow-comunidad">Frecuentes</span>
+            </h1>
+            <p class="text-slate-500 text-sm md:text-lg">
+                Resolvemos todas tus dudas para que puedas ser parte de la feria más grande de Villa Ángela.
+            </p>
+        </header>
+
+        <div class="space-y-4">
+            <div class="faq-item bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
+                <button class="faq-btn w-full p-6 text-left flex justify-between items-center group">
+                    <span class="font-bold text-slate-800 md:text-lg group-hover:text-yellow-600 transition">¿Tiene algún costo participar en la feria?</span>
+                    <i class="fas fa-chevron-down text-slate-400 transition-transform duration-300"></i>
+                </button>
+                <div class="faq-answer text-slate-500 leading-relaxed text-sm md:text-base">
+                    <div class="px-6 pb-6">
+                        Respuesta
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
+                <button class="faq-btn w-full p-6 text-left flex justify-between items-center group">
+                    <span class="font-bold text-slate-800 md:text-lg group-hover:text-yellow-600 transition">¿Qué necesito para inscribirme como emprendedor?</span>
+                    <i class="fas fa-chevron-down text-slate-400 transition-transform duration-300"></i>
+                </button>
+                <div class="faq-answer text-slate-500 leading-relaxed text-sm md:text-base">
+                    <div class="px-6 pb-6">
+                        Respuesta
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
+                <button class="faq-btn w-full p-6 text-left flex justify-between items-center group">
+                    <span class="font-bold text-slate-800 md:text-lg group-hover:text-yellow-600 transition">¿Se puede vender comida o bebida?</span>
+                    <i class="fas fa-chevron-down text-slate-400 transition-transform duration-300"></i>
+                </button>
+                <div class="faq-answer text-slate-500 leading-relaxed text-sm md:text-base">
+                    <div class="px-6 pb-6">
+                        Respuesta
+                    </div>
+                </div>
+            </div>
+
+            <div class="faq-item bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
+                <button class="faq-btn w-full p-6 text-left flex justify-between items-center group">
+                    <span class="font-bold text-slate-800 md:text-lg group-hover:text-yellow-600 transition">¿Qué pasa si llueve el día del evento?</span>
+                    <i class="fas fa-chevron-down text-slate-400 transition-transform duration-300"></i>
+                </button>
+                <div class="faq-answer text-slate-500 leading-relaxed text-sm md:text-base">
+                    <div class="px-6 pb-6">
+                        Respuesta
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="mt-20 p-8 md:p-12 bg-yellow-comunidad rounded-[2.5rem] text-center shadow-xl relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-400 rounded-full opacity-50"></div>
+            <h2 class="text-2xl md:text-3xl font-black mb-4 relative z-10">¿Todavía tenés dudas?</h2>
+            <p class="text-black/70 mb-8 relative z-10 text-sm md:text-base">Hablemos directamente por WhatsApp y te ayudamos a ser parte de la comunidad.</p>
+            <a href="https://wa.me/tunúmero" class="inline-flex items-center gap-3 bg-black text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition transform active:scale-95 shadow-lg relative z-10">
+                <i class="fab fa-whatsapp text-xl"></i>
+                CONTACTAR POR WHATSAPP
+            </a>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 text-white pt-16 pb-8">
+        <div class="container mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 text-center md:text-left">
+            <div>
+                <h3 class="text-2xl font-black mb-4">COMUNIDAD <span class="text-yellow-comunidad uppercase">Emprendedora</span></h3>
+                <p class="text-slate-400 text-sm">Impulsando el comercio local y el espíritu emprendedor en Villa Ángela, Chaco.</p>
+            </div>
+            <div class="md:pl-10">
+                <h4 class="font-bold mb-4 uppercase text-yellow-comunidad text-xs tracking-widest">Navegación</h4>
+                <ul class="space-y-2 text-slate-400 text-sm">
+                    <li><a href="index.html#" class="hover:text-white transition">Inicio</a></li>
+                    <li><a href="index.html#seccion-feria" class="hover:text-white transition">Próximos eventos</a></li>
+                    <li><a href="index.html#inscripcion" class="hover:text-white transition">Inscripción</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 uppercase text-yellow-comunidad text-xs tracking-widest">Contacto</h4>
+                <div class="flex justify-center md:justify-start gap-6 text-2xl">
+                    <a href="https://www.instagram.com/comunidademprendedorava/" class="hover:text-yellow-comunidad transition"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="hover:text-yellow-comunidad transition"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="container mx-auto px-6 mt-16 pt-8 border-t border-slate-800 text-center">
+            <p class="text-[10px] md:text-xs text-slate-500 opacity-60 italic">© 2026 Comunidad Emprendedora Villa Ángela. Todos los derechos reservados.</p>
+            <p class="text-[10px] md:text-xs text-slate-500 opacity-60 italic">Diseñado y desarrollado por Hostara.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

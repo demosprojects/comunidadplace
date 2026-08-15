@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comunidad Emprendedora - Villa Ángela</title>
+    <link rel="shortcut icon" href="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Firebase (compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+        .bg-yellow-comunidad { background-color: #FBBF24; }
+        .text-yellow-comunidad { color: #FBBF24; }
+        .border-yellow-comunidad { border-color: #FBBF24; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Ajuste de trazo para móviles y PC */
+        .text-stroke { -webkit-text-stroke: 1.5px white; paint-order: stroke fill; }
+        .text-stroke-yellow { -webkit-text-stroke: 1.5px #FBBF24; paint-order: stroke fill; }
+        
+        @media (min-width: 768px) {
+            .text-stroke { -webkit-text-stroke: 3px white; }
+            .text-stroke-yellow { -webkit-text-stroke: 3px #FBBF24; }
+        }
+
+        /* Estilos del botón ScrollTop */
+        #scroll-top-btn {
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+        #scroll-top-btn.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Ícono de Instagram con su degradado de marca */
+        .instagram-gradient {
+            background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+        }
+        .hover-instagram:hover {
+            background: linear-gradient(90deg, #fd5949, #d6249f 60%, #285AEB);
+        }
+        .hover-instagram:hover span:last-child {
+            color: #fff;
+        }
+
+        /* ===== Skeleton loading (placeholders mientras carga Firestore) ===== */
+        .skeleton {
+            position: relative;
+            overflow: hidden;
+            background-color: #e2e8f0; /* slate-200 */
+        }
+        .skeleton::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+            animation: skeleton-shimmer 1.5s infinite;
+        }
+        @keyframes skeleton-shimmer {
+            100% { transform: translateX(100%); }
+        }
+        /* Los bloques marcados con [data-skeleton] se eliminan por JS apenas
+           llega el contenido real desde site-data.js (ver app.js). */
+        [data-skeleton] { flex-shrink: 0; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+<button id="scroll-top-btn" class="fixed bottom-6 right-6 z-[100] bg-yellow-comunidad text-black w-12 h-12 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+<header class="relative min-h-[600px] md:h-[650px] flex items-center bg-black overflow-hidden">
+    <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786771518/ushrbl4zlec0vekxuz8t.webp" class="absolute inset-0 w-full h-full object-cover opacity-60" alt="Feria Villa Ángela">
+    <div class="container mx-auto px-6 relative z-10">
+        <h1 class="text-white text-4xl sm:text-5xl md:text-7xl font-black leading-tight flex flex-wrap items-center text-stroke">
+            <span>COMUNIDAD</span>
+            <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp" alt="Foco" class="w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 ml-4"
+                 style="filter: brightness(1.3) drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px rgba(255,255,200,0.8));">
+        </h1>
+        
+        <h1 class="text-white text-4xl sm:text-5xl md:text-7xl font-black leading-tight">
+            <span class="text-yellow-comunidad uppercase text-stroke-yellow">
+                Emprendedora
+            </span>
+        </h1>
+
+        <p class="text-yellow-comunidad text-2xl sm:text-3xl md:text-4xl font-black mt-2 uppercase tracking-wide leading-tight">Villa Ángela</p>
+        <p class="text-yellow-comunidad text-xl md:text-2xl font-bold mt-1 uppercase tracking-wide leading-snug">Fundación Transformando Realidades</p>
+        <p class="text-white text-base md:text-lg mt-4 max-w-lg">Impulsamos a los emprendedores locales.</p>
+        
+        <div class="flex flex-col sm:flex-row gap-4 mt-8">
+            <button id="btn-feria" class="w-full sm:w-auto bg-yellow-comunidad text-black font-bold py-4 px-8 rounded-full hover:bg-yellow-500 transition flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-map-marker-alt"></i> Ver próximos eventos
+            </button>
+            <button id="btn-participar" class="w-full sm:w-auto bg-white text-black font-bold py-4 px-8 rounded-full hover:bg-slate-100 transition flex items-center justify-center gap-2 shadow-lg">
+                <i class="far fa-edit"></i> Quiero participar
+            </button>
+            <!-- Reemplazá la URL por la de Comunidad Place -->
+            <a id="btn-comunidad-place" href="https://URL_COMUNIDAD_PLACE" target="_blank" rel="noopener"
+               class="w-full sm:w-auto bg-black text-white font-bold py-4 px-8 rounded-full hover:bg-slate-800 transition flex items-center justify-center gap-2 shadow-lg border border-white/10">
+                <i class="fas fa-bag-shopping text-yellow-comunidad"></i> Ir a Comunidad Place
+            </a>
+        </div>
+    </div>
+    
+    <div class="absolute bottom-0 left-0 w-full leading-none z-20 translate-y-[1px]">
+        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" class="relative block w-full h-[40px] md:h-[60px] fill-white">
+            <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C57.23,115.32,126.23,121.17,185.83,107.41,242.42,94.25,283.33,73.53,321.39,56.44Z"></path>
+        </svg>
+    </div>
+</header>
+
+<section class="py-16 md:py-24 bg-white">
+    <div class="container mx-auto px-6 text-center max-w-4xl">
+        <div class="mb-8 flex justify-center">
+            <div class="w-20 h-20 bg-yellow-100 rounded-2xl flex items-center justify-center transform rotate-3 shadow-sm">
+                <i class="fas fa-university text-yellow-600 text-3xl"></i>
+            </div>
+        </div>
+        
+        <h2 class="text-3xl md:text-4xl font-black mb-8"><span class="text-yellow-500">¿Quienes somos?</span></h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
+            <div class="space-y-4">
+                <p class="text-slate-700 text-lg leading-relaxed">
+                    Comunidad Emprendedora es un espacio pensado para acompañar a emprendedores de Villa Ángela y la zona, dándoles un lugar real donde mostrar y vender lo que hacen. Organizamos ferias periódicas, sumamos visibilidad a cada marca y construimos una red de apoyo entre quienes eligen emprender.
+                </p>
+                <p class="text-slate-600">
+                   Nuestro objetivo es fortalecer el comercio local, generar oportunidades de venta directa y ayudar a que cada emprendimiento gane presencia, tanto en la feria como en nuestras redes.
+                </p>
+            </div>
+            <div class="bg-slate-50 p-6 rounded-3xl border-l-4 border-yellow-comunidad">
+                <h4 class="font-bold text-slate-900 mb-2 uppercase text-xs tracking-widest">Impacto y Destinatarios</h4>
+                <p class="text-slate-600 text-sm leading-relaxed">
+                   Está pensado para emprendedores, artesanos y pequeños productores de Villa Ángela y alrededores que quieran sumarse a la comunidad y participar de las ferias.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="contacto" class="py-16 md:py-24 bg-slate-50 scroll-mt-24">
+    <div class="container mx-auto px-6 text-center max-w-4xl">
+        <div class="mb-8 flex justify-center">
+            <div class="w-20 h-20 bg-yellow-100 rounded-2xl flex items-center justify-center transform -rotate-3 shadow-sm">
+                <i class="fas fa-comments text-yellow-600 text-3xl"></i>
+            </div>
+        </div>
+
+        <h2 class="text-3xl md:text-4xl font-black mb-2"><span class="text-yellow-500">Contacto</span></h2>
+        <p class="text-slate-500 text-sm md:text-base uppercase tracking-widest font-bold mb-10">Nuestros canales de contacto para participar</p>
+
+        <div class="flex flex-col items-center gap-6">
+            <div class="flex flex-col items-center gap-3">
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Escribinos directo</p>
+                <div class="flex items-center gap-4">
+                    <!-- Reemplazá el número por el real, con código de país (Ej: 5493735123456) -->
+                    <a href="https://wa.me/NUMERO_WHATSAPP" target="_blank" rel="noopener"
+                       class="group flex items-center gap-3 bg-white border border-slate-200 hover:border-transparent hover:bg-[#25D366] rounded-full pl-3 pr-5 py-3 shadow-sm hover:shadow-lg transition-all">
+                        <span class="w-9 h-9 rounded-full bg-[#25D366]/10 group-hover:bg-white/20 flex items-center justify-center flex-shrink-0 transition-colors">
+                            <i class="fab fa-whatsapp text-[#25D366] group-hover:text-white text-lg transition-colors"></i>
+                        </span>
+                        <span class="font-bold text-sm text-slate-700 group-hover:text-white transition-colors">WhatsApp</span>
+                    </a>
+
+                    <!-- Reemplazá el link por el de tu cuenta de Instagram -->
+                    <a href="https://www.instagram.com/comunidademprendedorava/" target="_blank" rel="noopener"
+                       class="group flex items-center gap-3 bg-white border border-slate-200 hover:border-transparent rounded-full pl-3 pr-5 py-3 shadow-sm hover:shadow-lg transition-all hover-instagram">
+                        <span class="w-9 h-9 rounded-full instagram-gradient flex items-center justify-center flex-shrink-0">
+                            <i class="fab fa-instagram text-white text-lg"></i>
+                        </span>
+                        <span class="font-bold text-sm text-slate-700 transition-colors">Instagram</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center gap-3 pt-4 mt-2 border-t border-slate-200 w-full max-w-xs">
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-4">También podés ver las preguntas frecuentes</p>
+                <a href="faq.html" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-black text-white font-bold py-4 px-8 rounded-full hover:bg-slate-800 transition shadow-lg">
+                    <i class="fas fa-circle-question text-yellow-comunidad"></i> Ver preguntas frecuentes
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-12 md:py-20 bg-slate-50 overflow-hidden">
+    <div class="container mx-auto px-6">
+        <h2 class="text-2xl md:text-3xl font-black text-center mb-10">Galería de fotos</h2>
+        
+        <div class="relative flex items-center"> 
+            <button id="gallery-prev" class="hidden md:flex absolute -left-2 md:left-4 z-30 bg-white/90 w-12 h-12 rounded-full items-center justify-center shadow-xl hover:bg-yellow-comunidad transition active:scale-95">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div id="gallery-container" class="flex overflow-x-auto gap-4 md:gap-6 pb-6 no-scrollbar snap-x px-2">
+                <!-- Las fotos se cargan dinámicamente desde Firestore (colección "galeria") vía site-data.js -->
+                <p id="gallery-empty" class="text-slate-400 text-sm italic px-2 hidden">Todavía no hay fotos cargadas.</p>
+
+                <!-- Skeleton: se elimina automáticamente en cuanto se agregan fotos reales -->
+                <div data-skeleton class="skeleton w-64 h-64 md:w-72 md:h-72 rounded-2xl"></div>
+                <div data-skeleton class="skeleton w-64 h-64 md:w-72 md:h-72 rounded-2xl"></div>
+                <div data-skeleton class="skeleton w-64 h-64 md:w-72 md:h-72 rounded-2xl"></div>
+                <div data-skeleton class="skeleton w-64 h-64 md:w-72 md:h-72 rounded-2xl hidden sm:block"></div>
+            </div>
+
+            <button id="gallery-next" class="hidden md:flex absolute -right-2 md:right-4 z-30 bg-white/90 w-12 h-12 rounded-full items-center justify-center shadow-xl hover:bg-yellow-comunidad transition active:scale-95">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        <p class="md:hidden text-center text-slate-400 text-xs mt-2 italic">← Desliza para ver más fotos →</p>
+    </div>
+</section>
+
+<section id="seccion-feria" class="py-16 md:py-24 bg-white relative overflow-hidden">
+    <div class="absolute top-0 right-0 w-64 h-64 bg-yellow-100/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-64 h-64 bg-slate-100 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none"></div>
+
+    <div class="container mx-auto px-6 relative z-10">
+        <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-black mb-2">Próximos eventos</h2>
+            <p class="text-slate-400 uppercase tracking-widest text-xs font-bold">¡Agendá las fechas y vení a visitarnos!</p>
+        </div>
+
+        <div class="max-w-5xl mx-auto">
+
+            <!-- Contenedor de ferias: site-data.js agrega una tarjeta por cada
+                 feria marcada como "activa" en el admin, con el mismo diseño
+                 apiladas una debajo de la otra. -->
+            <div id="ferias-container" class="flex flex-col gap-8">
+
+                <!-- Skeleton: se elimina automáticamente en cuanto se agrega una feria real -->
+                <div data-skeleton class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 overflow-hidden border border-slate-100 flex flex-col md:flex-row">
+                    <div class="skeleton w-full md:w-2/5 h-64 md:h-auto"></div>
+                    <div class="w-full md:w-3/5 p-8 md:p-12 flex flex-col justify-center gap-4">
+                        <div class="skeleton h-3 w-24 rounded-full"></div>
+                        <div class="skeleton h-8 w-3/4 rounded-lg"></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-2">
+                            <div class="flex items-center gap-3">
+                                <div class="skeleton w-10 h-10 rounded-xl"></div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="skeleton h-2 w-16 rounded-full"></div>
+                                    <div class="skeleton h-3 w-24 rounded-full"></div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="skeleton w-10 h-10 rounded-xl"></div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="skeleton h-2 w-16 rounded-full"></div>
+                                    <div class="skeleton h-3 w-24 rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-4 mt-2">
+                            <div class="skeleton flex-1 h-14 rounded-2xl"></div>
+                            <div class="skeleton flex-1 h-14 rounded-2xl"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p id="feria-sin-eventos" class="text-center text-slate-400 italic hidden">Por el momento no hay ninguna feria programada. ¡Volvé a visitarnos pronto!</p>
+
+            <p class="text-center mt-12 text-slate-400 text-sm italic font-medium">
+                "Una tarde para disfrutar en familia y apoyar lo nuestro."
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="py-16 md:py-24 bg-slate-50 overflow-hidden text-center">
+    <div class="container mx-auto px-6">
+        <h2 class="text-2xl md:text-3xl font-black mb-12">Emprendedores que participan</h2>
+        <div class="relative flex items-center">
+            <div id="carousel-container" class="flex overflow-x-auto gap-6 md:gap-10 pb-10 no-scrollbar pointer-events-none px-4 md:px-10 justify-center">
+                <!-- Los emprendedores se cargan dinamicamente desde Firestore (coleccion emprendedores) via site-data.js -->
+
+                <!-- Skeleton: se elimina automáticamente en cuanto se agregan emprendedores reales -->
+                <div data-skeleton class="flex flex-col items-center gap-3">
+                    <div class="skeleton w-20 h-20 md:w-24 md:h-24 rounded-full"></div>
+                    <div class="skeleton h-3 w-16 rounded-full"></div>
+                </div>
+                <div data-skeleton class="flex flex-col items-center gap-3">
+                    <div class="skeleton w-20 h-20 md:w-24 md:h-24 rounded-full"></div>
+                    <div class="skeleton h-3 w-16 rounded-full"></div>
+                </div>
+                <div data-skeleton class="flex flex-col items-center gap-3">
+                    <div class="skeleton w-20 h-20 md:w-24 md:h-24 rounded-full"></div>
+                    <div class="skeleton h-3 w-16 rounded-full"></div>
+                </div>
+                <div data-skeleton class="flex flex-col items-center gap-3 hidden sm:flex">
+                    <div class="skeleton w-20 h-20 md:w-24 md:h-24 rounded-full"></div>
+                    <div class="skeleton h-3 w-16 rounded-full"></div>
+                </div>
+            </div> </div> </div> 
+    </section>
+
+<section class="py-16 md:py-24 bg-white">
+    <div class="container mx-auto px-6 text-center">
+        <h2 class="text-2xl md:text-3xl font-black mb-16">Lo que dicen nuestros emprendedores</h2>
+        <div id="testimonios-container" class="grid grid-cols-1 md:grid-cols-2 gap-8 justify-center">
+            <!-- Los testimonios se cargan dinámicamente desde Firestore (emprendedores con campo "testimonio") vía site-data.js -->
+
+            <!-- Skeleton: se elimina automáticamente en cuanto se agregan testimonios reales -->
+            <div data-skeleton class="bg-slate-50 rounded-3xl p-8 text-left space-y-4">
+                <div class="flex items-center gap-3">
+                    <div class="skeleton w-12 h-12 rounded-full"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="skeleton h-3 w-32 rounded-full"></div>
+                        <div class="skeleton h-2 w-20 rounded-full"></div>
+                    </div>
+                </div>
+                <div class="skeleton h-3 w-full rounded-full"></div>
+                <div class="skeleton h-3 w-5/6 rounded-full"></div>
+                <div class="skeleton h-3 w-2/3 rounded-full"></div>
+            </div>
+            <div data-skeleton class="bg-slate-50 rounded-3xl p-8 text-left space-y-4">
+                <div class="flex items-center gap-3">
+                    <div class="skeleton w-12 h-12 rounded-full"></div>
+                    <div class="space-y-2 flex-1">
+                        <div class="skeleton h-3 w-32 rounded-full"></div>
+                        <div class="skeleton h-2 w-20 rounded-full"></div>
+                    </div>
+                </div>
+                <div class="skeleton h-3 w-full rounded-full"></div>
+                <div class="skeleton h-3 w-5/6 rounded-full"></div>
+                <div class="skeleton h-3 w-2/3 rounded-full"></div>
+            </div>
+        </div>
+        <p id="testimonios-empty" class="text-slate-400 text-sm italic hidden">Todavía no hay testimonios cargados.</p>
+    </div>
+</section>
+
+<section class="py-16 md:py-24 bg-slate-50 overflow-hidden text-center">
+    <div class="container mx-auto px-6">
+        <h2 class="text-2xl md:text-3xl font-black mb-2">Comercios adheridos</h2>
+        <p class="text-slate-400 uppercase tracking-widest text-xs font-bold mb-12">Comercios que apoyan a la comunidad</p>
+        <div class="relative flex items-center">
+            <div id="comercios-container" class="flex overflow-x-auto gap-6 md:gap-10 pb-10 no-scrollbar pointer-events-none px-4 md:px-10 justify-center">
+                <!-- Los comercios se cargan dinamicamente desde Firestore (coleccion comercios) via site-data.js -->
+
+                <!-- Skeleton: se elimina automáticamente en cuanto se agregan comercios reales -->
+                <div data-skeleton class="flex flex-col items-center gap-3">
+                    <div class="skeleton w-20 h-20 md:w-24 md:h-24 rounded-full"></div>
+                    <div class="skeleton h-3 w-16 rounded-full"></div>
+                </div>
+                <div data-skeleton class="flex flex-col items-center gap-3">
+                    <div class="skeleton w-20 h-20 md:w-24 md:h-24 rounded-full"></div>
+                    <div class="skeleton h-3 w-16 rounded-full"></div>
+                </div>
+                <div data-skeleton class="flex flex-col items-center gap-3">
+                    <div class="skeleton w-20 h-20 md:w-24 md:h-24 rounded-full"></div>
+                    <div class="skeleton h-3 w-16 rounded-full"></div>
+                </div>
+                <div data-skeleton class="flex flex-col items-center gap-3 hidden sm:flex">
+                    <div class="skeleton w-20 h-20 md:w-24 md:h-24 rounded-full"></div>
+                    <div class="skeleton h-3 w-16 rounded-full"></div>
+                </div>
+            </div> </div> </div> 
+    </section>
+
+<section id="comunidad-place" class="py-14 md:py-24 bg-white scroll-mt-24">
+    <div class="container mx-auto px-4 sm:px-6">
+        <div class="max-w-4xl mx-auto bg-black rounded-[2rem] md:rounded-[2.5rem] p-6 sm:p-10 md:p-14 text-center relative overflow-hidden shadow-2xl">
+            <!-- Glow decorativo -->
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-yellow-comunidad rounded-full opacity-20 blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-yellow-comunidad rounded-full opacity-10 blur-3xl pointer-events-none"></div>
+            <!-- Textura de puntos sutil -->
+            <div class="absolute inset-0 opacity-[0.07] pointer-events-none" style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 18px 18px;"></div>
+
+            <div class="relative z-10">
+                <!-- Badge -->
+                <div class="inline-flex items-center gap-2 bg-white/10 border border-white/10 rounded-full px-4 py-1.5 mb-5 backdrop-blur-sm">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-comunidad opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-comunidad"></span>
+                    </span>
+                    <span class="text-yellow-comunidad text-[11px] sm:text-xs font-bold uppercase tracking-widest">Abierto las 24 hs</span>
+                </div>
+
+                <div class="w-16 h-16 md:w-20 md:h-20 bg-yellow-comunidad rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-yellow-comunidad/20 transform -rotate-3">
+                    <i class="fas fa-bag-shopping text-black text-2xl md:text-3xl"></i>
+                </div>
+
+                <h2 class="text-3xl sm:text-3xl md:text-4xl font-black text-white mb-4 leading-tight">
+                    Descubrí <span class="text-yellow-comunidad">Comunidad Place</span>
+                </h2>
+                <p class="text-slate-300 text-sm sm:text-base md:text-lg max-w-xl mx-auto mb-8 leading-relaxed">
+                    Nuestro marketplace online, donde podés encontrar y comprarle directo a los emprendedores y comercios de la comunidad, las 24 horas del día.
+                </p>
+
+                <!-- Mini features -->
+                <div class="grid grid-cols-3 gap-2 sm:gap-4 max-w-md mx-auto mb-9 text-left sm:text-center">
+                    <div class="flex sm:flex-col items-center gap-2 sm:gap-1.5 bg-white/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
+                        <i class="fas fa-store text-yellow-comunidad text-base sm:text-lg"></i>
+                        <span class="text-slate-300 text-[11px] sm:text-xs font-semibold leading-tight">Emprendedores locales</span>
+                    </div>
+                    <div class="flex sm:flex-col items-center gap-2 sm:gap-1.5 bg-white/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
+                        <i class="fas fa-shield-heart text-yellow-comunidad text-base sm:text-lg"></i>
+                        <span class="text-slate-300 text-[11px] sm:text-xs font-semibold leading-tight">Compra directa y segura</span>
+                    </div>
+                    <div class="flex sm:flex-col items-center gap-2 sm:gap-1.5 bg-white/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
+                        <i class="fas fa-clock text-yellow-comunidad text-base sm:text-lg"></i>
+                        <span class="text-slate-300 text-[11px] sm:text-xs font-semibold leading-tight">Disponible 24/7</span>
+                    </div>
+                </div>
+
+                <!-- Reemplazá la URL por la de Comunidad Place -->
+                <a href="https://URL_COMUNIDAD_PLACE" target="_blank" rel="noopener"
+                   class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-yellow-comunidad text-black font-black py-4 px-10 rounded-full hover:bg-yellow-500 active:scale-95 transition shadow-xl shadow-yellow-comunidad/10 uppercase text-sm tracking-wide">
+                    <i class="fas fa-arrow-up-right-from-square"></i> Ir a Comunidad Place
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+  <footer class="bg-slate-900 text-white pt-16 pb-8">
+        <div class="container mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 text-center md:text-left">
+            <div>
+                <h3 class="text-2xl font-black mb-4">COMUNIDAD <span class="text-yellow-comunidad uppercase">Emprendedora</span></h3>
+                <p class="text-slate-400 text-sm">Impulsando el comercio local y el espíritu emprendedor en Villa Ángela, Chaco.</p>
+            </div>
+            <div class="md:pl-10">
+                <h4 class="font-bold mb-4 uppercase text-yellow-comunidad text-xs tracking-widest">Navegación</h4>
+                <ul class="space-y-2 text-slate-400 text-sm">
+                    <li><a href="#" class="hover:text-white transition">Inicio</a></li>
+                    <li><a href="#seccion-feria" class="hover:text-white transition">Próximos eventos</a></li>
+                    <li><a href="#contacto" class="hover:text-white transition">Contacto</a></li>
+                    <li><a href="faq.html" class="hover:text-yellow-comunidad transition font-bold">Preguntas Frecuentes</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 uppercase text-yellow-comunidad text-xs tracking-widest">Contacto</h4>
+                <div class="flex justify-center md:justify-start gap-6 text-2xl">
+                    <a href="https://www.instagram.com/comunidademprendedorava/" class="hover:text-yellow-comunidad transition"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="hover:text-yellow-comunidad transition"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="container mx-auto px-6 mt-16 pt-8 border-t border-slate-800 text-center">
+            <p class="text-[10px] md:text-xs text-slate-500 opacity-60 italic">© 2026 Comunidad Emprendedora Villa Ángela. Todos los derechos reservados.</p>
+            <p class="text-[10px] md:text-xs text-slate-500 opacity-60 italic">Diseñado y desarrollado por Hostara.</p>
+        </div>
+    </footer>
+
+<div id="modal-mapa" class="fixed inset-0 z-[200] hidden items-center justify-center p-2 bg-black/70 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-3xl rounded-[1.5rem] overflow-hidden shadow-2xl relative">
+        <button onclick="cerrarMapa()" class="absolute top-4 right-4 z-20 bg-white/90 w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:bg-white">
+            <i class="fas fa-times text-slate-800"></i>
+        </button>
+        <div class="relative h-[350px] md:h-[450px] bg-slate-50">
+            <div id="map-loader" class="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                <div class="w-10 h-10 border-4 border-yellow-comunidad border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <iframe id="iframe-mapa" src="" class="w-full h-full opacity-0 transition-opacity duration-500" style="border:0;" allowfullscreen="" loading="lazy" onload="window.quitarLoader && quitarLoader()"></iframe>
+        </div>
+    </div>
+</div>
+<div id="modal-foto" class="fixed inset-0 z-[250] hidden items-center justify-center p-4 bg-black/95 backdrop-blur-sm transition-all duration-300">
+    
+    <button onclick="cerrarFoto()" class="absolute top-6 right-6 z-[260] bg-white/10 hover:bg-yellow-comunidad hover:text-black text-white w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-xl">
+        <i class="fas fa-times text-xl"></i>
+    </button>
+
+    <button onclick="cambiarFoto(-1)" class="absolute left-4 z-[260] text-white/50 hover:text-yellow-comunidad text-4xl p-4 transition-colors">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <div class="max-w-5xl w-full h-full flex flex-col items-center justify-center p-2">
+        <img id="img-ampliada" src="" class="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl transform scale-95 transition-all duration-300">
+        
+        <div id="caption-foto" class="mt-6 text-center">
+    <p class="text-white font-black text-lg md:text-xl uppercase tracking-widest flex items-center justify-center">
+        <span>Comunidad <span class="text-yellow-comunidad">Emprendedora</span></span>
+        
+        <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp" alt="Foco" class="ml-3 h-8 w-auto object-contain">
+        
+    </p>
+    <p class="text-white/40 text-[10px] uppercase mt-1 tracking-widest">Villa Ángela - Chaco</p>
+</div>
+
+    <button onclick="cambiarFoto(1)" class="absolute right-4 z-[260] text-white/50 hover:text-yellow-comunidad text-4xl p-4 transition-colors">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
+
+<script src="site-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
