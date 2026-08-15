@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emprendedor | Comunidad Place</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="shortcut icon" href="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        html, body { overflow-x: hidden; max-width: 100%; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes splashPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        @keyframes splashBounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: .45; }
+            40% { transform: translateY(-6px); opacity: 1; }
+        }
+        #splash-screen { transition: opacity .5s ease; }
+        #splash-screen.splash-oculto { opacity: 0; pointer-events: none; }
+
+        /* Skeleton con shimmer: más visible que un simple pulse tenue */
+        .cp-skeleton {
+            position: relative;
+            overflow: hidden;
+            background-color: #e2e4e8;
+        }
+        .cp-skeleton::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 100%);
+            animation: cpShimmer 1.4s ease-in-out infinite;
+        }
+        @keyframes cpShimmer {
+            100% { transform: translateX(100%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .cp-skeleton::after { animation: none; }
+        }
+
+        @media (max-width: 767px) {
+            #buscador-emprendedor { font-size: 16px !important; }
+        }
+
+        #modal-producto-overlay {
+            background: rgba(0,0,0,0.75);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .25s ease;
+        }
+        #modal-producto-overlay.abierto { opacity: 1; pointer-events: auto; }
+
+        #modal-producto {
+            left: 0; right: 0; bottom: 0;
+            background: #fff;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -12px 40px rgba(0,0,0,0.2);
+            max-height: 92vh;
+            max-height: 92dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(100%);
+            transition: transform .3s ease, opacity .25s ease, visibility 0s linear .3s;
+            pointer-events: none;
+        }
+        #modal-producto.abierto {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+            pointer-events: auto;
+            transition: transform .3s ease, opacity .25s ease, visibility 0s linear 0s;
+        }
+
+        @media (min-width: 640px) {
+            #modal-producto {
+                left: 50%; right: auto; bottom: auto; top: 50%;
+                width: 92%; max-width: 780px; max-height: 88vh;
+                max-height: 88dvh;
+                border-radius: 24px;
+                transform: translate(-50%, -48%) scale(0.96);
+                box-shadow: 0 24px 64px rgba(0,0,0,0.28);
+            }
+            #modal-producto.abierto { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* LIGHTBOX IMAGEN PRODUCTO */
+        #lightbox-imagen-overlay {
+            background: rgba(0,0,0,0.96);
+            opacity: 0;
+            transition: opacity .3s ease;
+        }
+        #lightbox-imagen-overlay.abierto { opacity: 1; }
+
+        #lightbox-imagen-img {
+            opacity: 0;
+            transition: opacity .28s ease;
+            touch-action: none;
+        }
+        #lightbox-imagen-img.abierto { opacity: 1; }
+        #lightbox-imagen-img.lb-transicion { transition: opacity .28s ease, transform .28s cubic-bezier(.16,1,.3,1); }
+        #lightbox-imagen-viewport { touch-action: none; }
+
+        .zoom-badge { transition: opacity .25s ease, transform .25s ease; }
+        @media (hover: hover) {
+            .zoom-trigger:hover .zoom-badge { opacity: 1; transform: scale(1); }
+            .zoom-trigger:hover .zoom-img { transform: scale(1.035); }
+        }
+    </style>
+</head>
+<body class="bg-white text-black overflow-x-hidden">
+
+    <!-- SPLASH SCREEN (entrada desde el link directo de un producto): igual
+         al de index.html, para que la transición se sienta consistente
+         venga el link de la home o del perfil del emprendedor. -->
+    <div id="splash-screen" class="hidden fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center gap-6">
+        <div class="absolute inset-0 pointer-events-none opacity-[0.12]"
+             style="background-image: radial-gradient(circle, #ffffff 1.5px, transparent 1.5px); background-size: 28px 28px;"></div>
+
+        <div class="relative z-10 flex flex-col items-center gap-5 px-6 text-center">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-yellow-400 rounded-2xl flex items-center justify-center shadow-[0_0_60px_rgba(250,204,21,0.35)]" style="animation: splashPulse 1.8s ease-in-out infinite;">
+                <svg class="w-8 h-8 sm:w-10 sm:h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+                </svg>
+            </div>
+
+            <div class="leading-none">
+                <span class="block text-[10px] sm:text-xs font-black tracking-[0.3em] text-yellow-400 uppercase mb-1.5">Comunidad</span>
+                <span class="block text-2xl sm:text-3xl font-900 tracking-wide uppercase text-white">Place</span>
+            </div>
+
+            <div class="flex items-center gap-2 mt-1">
+                <span class="w-2 h-2 rounded-full bg-yellow-400" style="animation: splashBounce 1s ease-in-out infinite; animation-delay: 0s;"></span>
+                <span class="w-2 h-2 rounded-full bg-yellow-400" style="animation: splashBounce 1s ease-in-out infinite; animation-delay: .15s;"></span>
+                <span class="w-2 h-2 rounded-full bg-yellow-400" style="animation: splashBounce 1s ease-in-out infinite; animation-delay: .3s;"></span>
+            </div>
+
+            <p class="text-zinc-400 text-[11px] sm:text-xs font-bold uppercase tracking-widest">Preparando tu producto…</p>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            try {
+                var params = new URLSearchParams(window.location.search);
+                if (params.get('producto')) {
+                    var splash = document.getElementById('splash-screen');
+                    if (splash) splash.classList.remove('hidden');
+                }
+            } catch (e) { /* URLSearchParams no soportado: seguimos sin splash */ }
+        })();
+    </script>
+
+    <!-- NAV / HEADER (igual que index.html, sin buscador) -->
+    <nav id="site-header" class="bg-[#0b0c10] text-white fixed top-0 left-0 right-0 z-50 border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+        <div class="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap md:flex-nowrap items-center gap-x-4 sm:gap-x-6 gap-y-3 justify-between">
+
+            <div class="order-1 flex items-center gap-2 sm:gap-2.5 flex-shrink-0 cursor-pointer select-none group" onclick="window.location.reload()">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_2px_14px_rgba(250,204,21,0.35)] group-hover:-rotate-6 group-active:scale-90 transition-transform duration-300">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+                    </svg>
+                </div>
+                <div class="leading-none group-hover:opacity-80 transition-opacity">
+                    <span class="block text-[8px] sm:text-[9px] font-black tracking-[0.25em] text-yellow-400 uppercase">Comunidad</span>
+                    <span class="block text-base sm:text-xl font-900 tracking-wide uppercase -mt-0.5">Place</span>
+                </div>
+            </div>
+
+            <div class="order-2 md:order-3 flex items-center gap-1 font-bold text-xs uppercase tracking-widest flex-shrink-0">
+                <a href="index.html" class="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/10 hover:text-yellow-400 transition-all active:scale-95">
+                    <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                    <span class="sm:hidden">Volver</span>
+                    <span class="hidden sm:inline">Volver al inicio</span>
+                </a>
+                <button onclick="abrirCarrito()" class="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/10 hover:text-yellow-400 transition-all active:scale-95">
+                    <span class="relative inline-flex flex-shrink-0">
+                        <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 002 1.65h8.4a2 2 0 002-1.65L20 7.5H6" />
+                            <circle cx="9.5" cy="19.5" r="1.4" fill="currentColor" stroke="none"/>
+                            <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" stroke="none"/>
+                        </svg>
+                        <span id="badge-carrito" class="hidden absolute -top-2 -right-2 bg-yellow-400 text-black text-[10px] font-black rounded-full min-w-[17px] h-[17px] px-1 flex items-center justify-center ring-2 ring-black">0</span>
+                    </span>
+                    <span class="hidden sm:inline">Carrito</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+    <div id="header-spacer" aria-hidden="true"></div>
+
+    <!-- BARRA DE ANUNCIO TEMPORAL (solo si el emprendedor cargó un texto) -->
+    <div id="perfil-anuncio-wrap" class="hidden items-center justify-center gap-2.5 bg-yellow-400 text-black px-4 py-2.5 sm:py-3 text-center">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+        <span id="perfil-anuncio-texto" class="text-xs sm:text-sm font-bold leading-snug"></span>
+    </div>
+
+    <script>
+        (function () {
+            var header = document.getElementById('site-header');
+            var spacer = document.getElementById('header-spacer');
+            function ajustarSpacer() {
+                if (!header || !spacer) return;
+                var h = header.offsetHeight;
+                spacer.style.height = h + 'px';
+                document.documentElement.style.scrollPaddingTop = h + 'px';
+            }
+            ajustarSpacer();
+            window.addEventListener('resize', ajustarSpacer);
+            window.addEventListener('load', ajustarSpacer);
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustarSpacer);
+        })();
+    </script>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         CABECERA DE PERFIL REDISEÑADA (ESTILO MODERNO & PROFESIONAL)
+    ════════════════════════════════════════════════════════════════ -->
+    <section class="relative bg-[#FBFBF9] border-b border-gray-200/60 pb-10 sm:pb-14">
+        <!-- Banner de portada moderno -->
+        <div id="perfil-banner-wrap" class="hidden relative w-full h-52 sm:h-64 md:h-72 overflow-hidden bg-zinc-900">
+            <img id="perfil-banner" src="" alt="" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+        </div>
+
+        <!-- Patrón elegante si no hay banner cargado -->
+        <div id="perfil-fondo-patron" class="w-full h-44 sm:h-56 md:h-64 bg-gradient-to-b from-zinc-100/80 to-[#FBFBF9] relative overflow-hidden border-b border-gray-200/40"
+             style="background-image: radial-gradient(circle, #d4d4d8 1.5px, transparent 1.5px); background-size: 28px 28px;">
+            <div class="absolute inset-0 bg-gradient-to-t from-[#FBFBF9] via-transparent to-transparent"></div>
+        </div>
+
+        <!-- Contenedor Principal del Emprendedor -->
+        <div class="container mx-auto px-4 sm:px-6 max-w-6xl">
+
+            <!-- Estado: Cargando (skeleton) -->
+            <div id="perfil-cargando" class="relative -mt-20 sm:-mt-24 md:-mt-28 z-10" aria-hidden="true">
+
+                <!-- Skeleton: cabecera del perfil -->
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
+                    <div class="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
+                        <div class="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-3xl cp-skeleton border-4 border-white shadow-2xl flex-shrink-0"></div>
+                        <div class="pb-1 flex flex-col items-center sm:items-start gap-3">
+                            <div class="h-5 w-40 rounded-full cp-skeleton"></div>
+                            <div class="h-9 sm:h-11 w-56 sm:w-72 rounded-xl cp-skeleton"></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center justify-center sm:justify-start md:justify-end gap-3 pb-1">
+                        <div class="h-[52px] w-52 rounded-2xl cp-skeleton"></div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-12 h-12 rounded-2xl cp-skeleton"></div>
+                            <div class="w-12 h-12 rounded-2xl cp-skeleton"></div>
+                            <div class="w-12 h-12 rounded-2xl cp-skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="my-6 border-t border-gray-200/60"></div>
+
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div class="space-y-2 max-w-3xl w-full">
+                        <div class="h-4 w-full max-w-xl rounded-full cp-skeleton"></div>
+                        <div class="h-4 w-2/3 max-w-md rounded-full cp-skeleton"></div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+                        <div class="h-9 rounded-full cp-skeleton"></div>
+                        <div class="h-9 rounded-full cp-skeleton"></div>
+                    </div>
+                </div>
+
+                <!-- Skeleton: grilla de productos -->
+                <div class="mt-14 sm:mt-20">
+                    <div class="mb-7 space-y-3">
+                        <div class="h-3 w-20 rounded-full cp-skeleton"></div>
+                        <div class="h-8 w-48 rounded-lg cp-skeleton"></div>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-5">
+                        <div class="rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
+                            <div class="aspect-[4/5] cp-skeleton"></div>
+                            <div class="p-2.5 sm:p-5 space-y-2 sm:space-y-3">
+                                <div class="h-3 sm:h-4 w-4/5 rounded cp-skeleton"></div>
+                                <div class="h-3 sm:h-4 w-1/2 rounded cp-skeleton"></div>
+                                <div class="flex items-center justify-between pt-1 sm:pt-2">
+                                    <div class="h-4 sm:h-6 w-12 sm:w-16 rounded cp-skeleton"></div>
+                                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full cp-skeleton"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
+                            <div class="aspect-[4/5] cp-skeleton"></div>
+                            <div class="p-2.5 sm:p-5 space-y-2 sm:space-y-3">
+                                <div class="h-3 sm:h-4 w-4/5 rounded cp-skeleton"></div>
+                                <div class="h-3 sm:h-4 w-1/2 rounded cp-skeleton"></div>
+                                <div class="flex items-center justify-between pt-1 sm:pt-2">
+                                    <div class="h-4 sm:h-6 w-12 sm:w-16 rounded cp-skeleton"></div>
+                                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full cp-skeleton"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hidden md:block rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
+                            <div class="aspect-[4/5] cp-skeleton"></div>
+                            <div class="p-2.5 sm:p-5 space-y-2 sm:space-y-3">
+                                <div class="h-3 sm:h-4 w-4/5 rounded cp-skeleton"></div>
+                                <div class="h-3 sm:h-4 w-1/2 rounded cp-skeleton"></div>
+                                <div class="flex items-center justify-between pt-1 sm:pt-2">
+                                    <div class="h-4 sm:h-6 w-12 sm:w-16 rounded cp-skeleton"></div>
+                                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full cp-skeleton"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hidden lg:block rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
+                            <div class="aspect-[4/5] cp-skeleton"></div>
+                            <div class="p-2.5 sm:p-5 space-y-2 sm:space-y-3">
+                                <div class="h-3 sm:h-4 w-4/5 rounded cp-skeleton"></div>
+                                <div class="h-3 sm:h-4 w-1/2 rounded cp-skeleton"></div>
+                                <div class="flex items-center justify-between pt-1 sm:pt-2">
+                                    <div class="h-4 sm:h-6 w-12 sm:w-16 rounded cp-skeleton"></div>
+                                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full cp-skeleton"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
+                            <div class="aspect-[4/5] cp-skeleton"></div>
+                            <div class="p-2.5 sm:p-5 space-y-2 sm:space-y-3">
+                                <div class="h-3 sm:h-4 w-4/5 rounded cp-skeleton"></div>
+                                <div class="h-3 sm:h-4 w-1/2 rounded cp-skeleton"></div>
+                                <div class="flex items-center justify-between pt-1 sm:pt-2">
+                                    <div class="h-4 sm:h-6 w-12 sm:w-16 rounded cp-skeleton"></div>
+                                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full cp-skeleton"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
+                            <div class="aspect-[4/5] cp-skeleton"></div>
+                            <div class="p-2.5 sm:p-5 space-y-2 sm:space-y-3">
+                                <div class="h-3 sm:h-4 w-4/5 rounded cp-skeleton"></div>
+                                <div class="h-3 sm:h-4 w-1/2 rounded cp-skeleton"></div>
+                                <div class="flex items-center justify-between pt-1 sm:pt-2">
+                                    <div class="h-4 sm:h-6 w-12 sm:w-16 rounded cp-skeleton"></div>
+                                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full cp-skeleton"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hidden md:block rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
+                            <div class="aspect-[4/5] cp-skeleton"></div>
+                            <div class="p-2.5 sm:p-5 space-y-2 sm:space-y-3">
+                                <div class="h-3 sm:h-4 w-4/5 rounded cp-skeleton"></div>
+                                <div class="h-3 sm:h-4 w-1/2 rounded cp-skeleton"></div>
+                                <div class="flex items-center justify-between pt-1 sm:pt-2">
+                                    <div class="h-4 sm:h-6 w-12 sm:w-16 rounded cp-skeleton"></div>
+                                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full cp-skeleton"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hidden lg:block rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
+                            <div class="aspect-[4/5] cp-skeleton"></div>
+                            <div class="p-2.5 sm:p-5 space-y-2 sm:space-y-3">
+                                <div class="h-3 sm:h-4 w-4/5 rounded cp-skeleton"></div>
+                                <div class="h-3 sm:h-4 w-1/2 rounded cp-skeleton"></div>
+                                <div class="flex items-center justify-between pt-1 sm:pt-2">
+                                    <div class="h-4 sm:h-6 w-12 sm:w-16 rounded cp-skeleton"></div>
+                                    <div class="w-7 h-7 sm:w-10 sm:h-10 rounded-full cp-skeleton"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado: Error / No encontrado -->
+            <div id="perfil-error" class="hidden text-center py-16">
+                <svg class="w-12 h-12 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                    <circle cx="10.5" cy="10.5" r="6.5"/>
+                    <path stroke-linecap="round" d="M20 20l-4.8-4.8"/>
+                </svg>
+                <h1 class="text-2xl sm:text-3xl font-900 uppercase italic mt-4">No encontramos este emprendedor</h1>
+                <p class="text-gray-500 mt-2 text-sm sm:text-base">Puede que el link esté roto o la tienda ya no se encuentre activa en la comunidad.</p>
+                <a href="index.html" class="inline-block mt-6 bg-black text-white px-8 py-4 rounded-full font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl">
+                    Volver al catálogo general
+                </a>
+            </div>
+
+            <!-- Tarjeta y Datos del Emprendedor -->
+            <div id="perfil-contenido" class="hidden relative -mt-20 sm:-mt-24 md:-mt-28 z-10">
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8">
+                    
+                    <!-- Avatar superpuesto + Identidad -->
+                    <div class="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
+                        <div class="relative group">
+                            <img id="perfil-logo" src="" alt="Logo" class="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-3xl object-cover border-4 border-white bg-white shadow-2xl flex-shrink-0 hidden">
+                            <div id="perfil-logo-placeholder" class="w-28 h-28 sm:w-36 sm:h-36 md:w-40 md:h-40 rounded-3xl bg-black text-white border-4 border-white shadow-2xl flex items-center justify-center text-4xl sm:text-5xl font-900 flex-shrink-0 hidden">?</div>
+                            <span class="absolute -bottom-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full border-2 border-white shadow flex items-center justify-center text-[10px]" title="Emprendedor Verificado">✓</span>
+                        </div>
+
+                        <div class="pb-1">
+                            <div class="inline-flex items-center gap-2 bg-white/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-gray-200/80 shadow-sm text-yellow-600 font-bold tracking-widest uppercase text-[10px] sm:text-xs">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                                </span>
+                                Emprendedor de la Comunidad
+                            </div>
+                            <h1 id="perfil-nombre" class="text-3xl sm:text-4xl md:text-5xl font-900 uppercase italic tracking-tight leading-none mt-2.5 text-zinc-900">Nombre de la tienda</h1>
+                        </div>
+                    </div>
+
+                    <!-- Botón de Contacto y Redes (Derecha) -->
+                    <div class="flex flex-wrap items-center justify-center sm:justify-start md:justify-end gap-3 pb-1">
+                        <a id="perfil-whatsapp" href="#" target="_blank" class="inline-flex items-center justify-center gap-2.5 bg-black text-white px-7 py-4 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-black/10 hover:bg-yellow-400 hover:text-black hover:shadow-yellow-400/20 transition-all active:scale-95">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 .075C5.41.075.043 5.44.043 12.03c0 2.106.55 4.16 1.595 5.975L.055 23.935l6.104-1.602a11.89 11.89 0 0 0 5.841 1.523h.005c6.59 0 11.956-5.368 11.956-11.96 0-3.195-1.245-6.199-3.504-8.458C18.198 1.18 15.195.075 12 .075zm6.85 17.034c-.29.816-1.684 1.562-2.316 1.637-.597.07-1.37.102-4.417-1.159-3.9-1.614-6.423-5.59-6.618-5.852-.194-.26-1.574-2.096-1.574-3.996 0-1.9 1.001-2.836 1.356-3.228.355-.392.775-.49 1.034-.49.258 0 .517.003.743.014.24.011.562-.091.879.673.323.778 1.1 2.686 1.196 2.882.097.196.162.424.032.685-.13.26-.194.424-.388.653-.194.228-.407.51-.582.685-.194.196-.401.408-.175.799.226.392 1.006 1.666 2.163 2.696 1.488 1.326 2.744 1.736 3.133 1.932.388.196.614.163.84-.098.226-.26.97-1.127 1.228-1.518.258-.392.517-.326.873-.196.355.13 2.261 1.068 2.649 1.264.388.196.647.294.743.457.097.163.097.947-.193 1.763z"/></svg>
+                            Contactar
+                        </a>
+
+                        <!-- Botones de Redes Sociales Modernos -->
+                        <div class="flex items-center gap-2">
+                            <a id="perfil-instagram" href="#" target="_blank" title="Instagram" class="hidden w-12 h-12 border border-gray-200/80 bg-white/90 backdrop-blur rounded-2xl items-center justify-center shadow-sm hover:bg-black hover:text-white hover:border-black transition-all active:scale-95">
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                            </a>
+                            <a id="perfil-facebook" href="#" target="_blank" title="Facebook" class="hidden w-12 h-12 border border-gray-200/80 bg-white/90 backdrop-blur rounded-2xl items-center justify-center shadow-sm hover:bg-black hover:text-white hover:border-black transition-all active:scale-95">
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M22 12.06C22 6.505 17.523 2 12 2S2 6.505 2 12.06c0 5.022 3.657 9.184 8.438 9.94v-7.03H7.898v-2.91h2.54V9.845c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.459h-1.26c-1.243 0-1.63.771-1.63 1.562v1.876h2.773l-.443 2.91h-2.33V22c4.78-.756 8.437-4.918 8.437-9.94z"/></svg>
+                            </a>
+                            <a id="perfil-tiktok" href="#" target="_blank" title="TikTok" class="hidden w-12 h-12 border border-gray-200/80 bg-white/90 backdrop-blur rounded-2xl items-center justify-center shadow-sm hover:bg-black hover:text-white hover:border-black transition-all active:scale-95">
+                                <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0 1 15.54 3h-3.09v12.4a2.592 2.592 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Línea Divisoria -->
+                <div class="my-6 sm:my-8 border-t border-gray-100"></div>
+
+                <!-- Descripción, ubicación/horario y medios de pago: todo apilado prolijamente -->
+                <div class="space-y-5 max-w-3xl">
+                    <p id="perfil-bio" class="text-gray-600 text-sm sm:text-base leading-relaxed">Bio...</p>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div id="perfil-ubicacion-wrap" class="hidden items-center gap-2 bg-gray-50 border border-gray-100 pl-3 pr-3.5 py-2 rounded-xl text-xs font-semibold text-gray-700 max-w-full">
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"/>
+                                <circle cx="12" cy="11" r="2.5"/>
+                            </svg>
+                            <span id="perfil-ubicacion" class="truncate"></span>
+                            <a id="perfil-mapa" href="#" target="_blank" class="hidden items-center gap-1 text-yellow-600 font-bold text-[10px] uppercase tracking-wide hover:underline flex-shrink-0 pl-2 ml-1 border-l border-gray-200">
+                                Mapa
+                                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M7 7h10v10"/></svg>
+                            </a>
+                        </div>
+                        <div id="perfil-horario-wrap" class="hidden items-center gap-2 bg-gray-50 border border-gray-100 px-3.5 py-2 rounded-xl text-xs font-semibold text-gray-700">
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="9"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3.5 2"/>
+                            </svg>
+                            <span id="perfil-horario" class="truncate"></span>
+                        </div>
+                    </div>
+
+                    <!-- Medios de pago aceptados por la tienda -->
+                    <div id="perfil-medios-pago-wrap" class="hidden items-center flex-wrap gap-2 pt-5 border-t border-gray-100">
+                        <span class="text-[10px] font-black uppercase tracking-widest text-gray-400 mr-0.5">Medios de pago</span>
+                        <div id="perfil-medios-pago" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Barra separadora amarilla -->
+    <div class="h-1.5 bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 w-full relative z-10 shadow-sm"></div>
+
+    <!-- SECCIÓN PRODUCTOS (Sin cambios en tu estructura) -->
+    <main id="seccion-productos" class="hidden container mx-auto px-4 sm:px-6 py-10 sm:py-16 max-w-7xl">
+        <div class="mb-10">
+            <div class="flex flex-wrap items-end justify-between gap-3 sm:gap-4 mb-5 sm:mb-7">
+                <div>
+                    <span class="text-yellow-600 font-bold tracking-widest uppercase text-[10px] sm:text-xs">Catálogo</span>
+                    <h2 class="text-2xl sm:text-3xl md:text-4xl font-900 uppercase italic mt-1 leading-none text-zinc-900">Sus productos</h2>
+                </div>
+            </div>
+
+            <div class="relative max-w-md">
+                <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                </svg>
+                <input type="text" id="buscador-emprendedor" placeholder="Buscar en sus productos..."
+                    class="w-full bg-gray-50 border-2 border-gray-200 rounded-full py-2.5 pl-11 pr-5 text-sm focus:outline-none focus:border-yellow-400 focus:bg-white transition-all placeholder:text-gray-400">
+            </div>
+        </div>
+
+        <div id="contenedor-productos" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-5"></div>
+    </main>
+
+    <!-- MODAL DE DETALLE DE PRODUCTO (Sin cambios) -->
+    <div id="modal-producto-overlay" class="fixed inset-0 z-[60]" onclick="cerrarModal()"></div>
+    <div id="modal-producto" class="fixed z-[61]">
+        <div class="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+            <span class="w-10 h-1.5 rounded-full bg-gray-300"></span>
+        </div>
+
+        <button onclick="cerrarModal()" class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/90 backdrop-blur border border-gray-200 shadow flex items-center justify-center text-gray-500 hover:text-black transition-colors" aria-label="Cerrar">✕</button>
+
+        <div class="overflow-y-auto flex-1 min-h-0 sm:grid sm:grid-cols-2">
+            <div class="zoom-trigger group relative aspect-[16/9] sm:aspect-square bg-gray-100 flex-shrink-0 flex items-center justify-center cursor-zoom-in overflow-hidden" onclick="abrirLightboxImagen()" role="button" tabindex="0" aria-label="Ampliar imagen del producto" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();abrirLightboxImagen();}">
+                <img id="modal-img" src="" alt="" class="zoom-img w-full h-full object-contain p-4 sm:p-6 transition-transform duration-300 pointer-events-none">
+                <span class="zoom-badge opacity-90 sm:opacity-0 scale-100 sm:scale-90 absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/70 backdrop-blur border border-white/10 text-white flex items-center justify-center pointer-events-none">
+                    <svg class="w-4 h-4 sm:w-[18px] sm:h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                        <circle cx="10.5" cy="10.5" r="6.5"/>
+                        <path stroke-linecap="round" d="M20 20l-4.35-4.35"/>
+                        <path stroke-linecap="round" d="M10.5 8v5M8 10.5h5"/>
+                    </svg>
+                </span>
+            </div>
+            <div class="p-4 sm:p-6 flex flex-col sm:justify-center min-w-0">
+                <span id="modal-tienda" class="text-yellow-500 font-black uppercase text-xs tracking-widest">TIENDA</span>
+                <h2 id="modal-nombre" class="text-xl sm:text-3xl font-900 uppercase leading-tight mt-1 italic break-words">Nombre</h2>
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
+                    <span id="modal-categoria" class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest"></span>
+                    <span id="modal-badge-nuevo" class="hidden text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-yellow-400 text-black">Nuevo</span>
+                    <span id="modal-badge-destacado" class="hidden items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 text-black">
+                        <svg class="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 15.8l-5.2 2.72.99-5.8-4.21-4.1 5.82-.85L12 2.5z"/></svg>
+                        Destacado
+                    </span>
+                </div>
+
+                <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mt-1">
+                    <p id="modal-precio" class="text-lg sm:text-2xl font-black">$0.00</p>
+                    <p id="modal-precio-anterior" class="hidden text-xs sm:text-sm font-bold text-gray-400 line-through">$0.00</p>
+                    <span id="modal-badge-oferta" class="hidden text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-600 text-white">-0% OFF</span>
+                    <button type="button" id="modal-medios-pago-wrap" onclick="abrirModalMediosPago()" class="hidden items-center gap-1.5 text-[11px] sm:text-xs font-bold text-gray-500 hover:text-black transition-colors flex-shrink-0">
+                        <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <rect x="2.5" y="5.5" width="19" height="13" rx="2.2"/>
+                            <path stroke-linecap="round" d="M2.5 9.5h19"/>
+                        </svg>
+                        <span class="underline decoration-dotted underline-offset-2">Ver medios de pago</span>
+                    </button>
+                </div>
+
+                <div id="modal-variantes" class="mt-3 space-y-2.5"></div>
+
+                <div id="modal-desc-wrap" class="mt-3 border-t border-gray-100 pt-3">
+                    <p class="text-[10px] font-black uppercase text-gray-400 mb-1.5 tracking-widest">Sobre el producto</p>
+                    <p id="modal-desc" class="text-gray-600 leading-relaxed text-sm">Descripción...</p>
+                </div>
+
+                <div class="pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-0 -mx-4 sm:mx-0 px-4 sm:px-0 sticky sm:static bottom-0 bg-white/95 sm:bg-transparent backdrop-blur sm:backdrop-blur-none border-t border-gray-100 sm:border-t-0 shadow-[0_-8px_20px_-6px_rgba(0,0,0,0.12)] sm:shadow-none">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1.5 bg-gray-100 rounded-full px-1.5 py-1 flex-shrink-0">
+                            <button onclick="modificarCantidadModal(-1)" class="w-8 h-8 rounded-full bg-white shadow font-black text-lg leading-none hover:bg-yellow-400 transition-all active:scale-90">−</button>
+                            <span id="modal-cantidad" class="font-black w-5 text-center text-sm">1</span>
+                            <button onclick="modificarCantidadModal(1)" class="w-8 h-8 rounded-full bg-white shadow font-black text-lg leading-none hover:bg-yellow-400 transition-all active:scale-90">+</button>
+                        </div>
+                        <button onclick="agregarAlCarrito()" class="flex-1 inline-flex items-center justify-center gap-2 bg-black text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-xs sm:text-sm hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+                            Agregar al carrito
+                        </button>
+                    </div>
+                    <a id="modal-whatsapp" href="#" target="_blank" class="mt-2 inline-flex items-center justify-center gap-1.5 w-full text-center text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
+                        o consultá directo por WhatsApp →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX: imagen de producto ampliada, con zoom y desplazamiento -->
+    <div id="lightbox-imagen" class="fixed inset-0 z-[120] hidden flex-col" role="dialog" aria-modal="true" aria-label="Imagen ampliada del producto">
+        <div id="lightbox-imagen-overlay" class="absolute inset-0 pointer-events-none"></div>
+
+        <button onclick="cerrarLightboxImagen()" aria-label="Cerrar imagen" class="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/10 hover:bg-yellow-400 border border-white/15 backdrop-blur flex items-center justify-center text-white hover:text-black transition-all active:scale-90">
+            <svg class="w-4 h-4 sm:w-[18px] sm:h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
+            </svg>
+        </button>
+
+        <!-- Área de gestos: pinch para zoom, arrastre para desplazar, doble tap para alternar zoom -->
+        <div id="lightbox-imagen-viewport" class="relative z-[5] flex-1 w-full flex items-center justify-center overflow-hidden select-none">
+            <img id="lightbox-imagen-img" src="" alt="" draggable="false" class="max-w-[92vw] max-h-[68vh] sm:max-h-[74vh] object-contain rounded-2xl shadow-[0_30px_90px_rgba(0,0,0,0.65)] select-none">
+        </div>
+
+        <div class="relative z-[10] flex flex-col items-center gap-3 pt-2 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex-shrink-0">
+            <div class="flex items-center gap-1 bg-white/10 border border-white/15 backdrop-blur rounded-full p-1.5">
+                <button onclick="lightboxZoomOut()" aria-label="Alejar" class="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/15 active:scale-90 transition-all">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" d="M5 12h14" />
+                    </svg>
+                </button>
+                <button id="lightbox-zoom-reset" onclick="lightboxZoomReset()" aria-label="Restablecer zoom" class="px-3.5 h-9 rounded-full flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/15 active:scale-90 transition-all opacity-40 pointer-events-none">
+                    1:1
+                </button>
+                <button onclick="lightboxZoomIn()" aria-label="Acercar" class="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/15 active:scale-90 transition-all">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                    </svg>
+                </button>
+            </div>
+            <p class="flex items-center gap-2 text-white/60 text-[10px] sm:text-xs font-black uppercase tracking-widest">
+                <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0"></span>
+                Producto de ComunidadPlace
+            </p>
+        </div>
+    </div>
+
+    <!-- DRAWER CARRITO -->
+    <div id="carrito-overlay" class="fixed inset-0 bg-black/85 z-[80] hidden" onclick="cerrarCarrito()"></div>
+    <div id="carrito-drawer" class="fixed top-0 right-0 h-full w-full max-w-md bg-white z-[90] shadow-2xl translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center flex-shrink-0">
+                    <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 002 1.65h8.4a2 2 0 002-1.65L20 7.5H6" />
+                        <circle cx="9.5" cy="19.5" r="1.4" fill="currentColor" stroke="none"/>
+                        <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" stroke="none"/>
+                    </svg>
+                </span>
+                <div>
+                    <h2 class="text-xl font-900 uppercase italic leading-none">Tu carrito</h2>
+                    <p id="carrito-subtitulo" class="text-[10px] font-black uppercase tracking-widest text-gray-400 mt-1">Vacío</p>
+                </div>
+            </div>
+            <button onclick="cerrarCarrito()" aria-label="Cerrar carrito" class="w-9 h-9 rounded-full bg-gray-100 hover:bg-black hover:text-white flex items-center justify-center text-gray-500 transition-colors flex-shrink-0">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
+                </svg>
+            </button>
+        </div>
+
+        <div id="carrito-items" class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-3"></div>
+
+        <div class="border-t border-gray-100 px-4 sm:px-6 py-5 flex-shrink-0 bg-gray-50/60">
+            <div id="carrito-modalidad-envio" class="mb-4 hidden">
+                <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">¿Cómo lo recibís?</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" id="btn-modalidad-envio" onclick="seleccionarModalidadEntrega(true)"
+                        class="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-gray-200 bg-white text-gray-500 py-2.5 px-2 text-[11px] font-bold uppercase tracking-wide transition-all">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h11v8H3V7zm11 3h4l3 3v2h-7v-5zM5.5 20a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm12 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                        </svg>
+                        Envío a domicilio
+                    </button>
+                    <button type="button" id="btn-modalidad-retiro" onclick="seleccionarModalidadEntrega(false)"
+                        class="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-gray-200 bg-white text-gray-500 py-2.5 px-2 text-[11px] font-bold uppercase tracking-wide transition-all">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 10.5L12 4l8 6.5V20a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1v-9.5z" />
+                        </svg>
+                        Retiro en el local
+                    </button>
+                </div>
+            </div>
+            <div class="mb-4 space-y-1.5">
+                <div id="carrito-fila-subtotal" class="flex items-center justify-between hidden">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Subtotal</span>
+                    <span id="carrito-subtotal" class="text-sm font-bold text-gray-600">$0.00</span>
+                </div>
+                <div id="carrito-fila-envio" class="flex items-center justify-between hidden">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Envío</span>
+                    <span id="carrito-envio" class="text-sm font-bold text-gray-600">$0.00</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Total</span>
+                    <span id="carrito-total" class="text-2xl font-900">$0.00</span>
+                </div>
+            </div>
+            <button id="carrito-whatsapp-btn" onclick="enviarPedidoWhatsapp()" class="inline-flex items-center justify-center gap-3 bg-black text-white w-full py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4l16 8-16 8 4-8-4-8z" />
+                </svg>
+                Enviar pedido
+            </button>
+            <button onclick="vaciarCarrito()" class="w-full mt-3 text-center text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
+                Vaciar carrito
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL MEDIOS DE PAGO (secundario, se abre desde el modal de producto) -->
+    <div id="modal-medios-pago-modal" class="fixed inset-0 z-[65] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/85" onclick="cerrarModalMediosPago()"></div>
+        <div class="bg-white w-full max-w-sm rounded-3xl relative z-10 p-6 shadow-2xl animate-fade-in">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-base font-900 uppercase italic leading-tight">Medios de pago<br>disponibles</h3>
+                <button onclick="cerrarModalMediosPago()" class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-black transition-colors" aria-label="Cerrar">✕</button>
+            </div>
+            <div id="modal-medios-pago-lista" class="flex flex-wrap gap-2"></div>
+        </div>
+    </div>
+
+    <!-- MODAL QR PEDIDO: en PC, escaneás con el celular para abrir WhatsApp -->
+    <div id="modal-qr-pedido" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/85" onclick="intentarCerrarModalQr()"></div>
+        <div class="bg-white w-full max-w-[300px] rounded-3xl relative z-10 p-5 shadow-2xl animate-fade-in text-center">
+            <button onclick="intentarCerrarModalQr()" aria-label="Cerrar" class="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-black transition-colors text-xs">✕</button>
+
+            <h3 class="text-base font-900 uppercase italic leading-tight pr-6">Escaneá y enviá tu pedido</h3>
+            <p class="text-gray-400 text-[11px] font-semibold leading-snug mt-1">
+                Apuntá la cámara del celular al código
+            </p>
+
+            <div class="mt-4 flex items-center justify-center">
+                <div id="qr-pedido-canvas" class="w-[176px] h-[176px] flex items-center justify-center bg-white rounded-2xl border border-gray-100">
+                    <!-- loader o canvas del QR, generado por JS -->
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 my-4">
+                <div class="flex-1 h-px bg-gray-100"></div>
+                <span class="text-[9px] font-black uppercase tracking-widest text-gray-300">o</span>
+                <div class="flex-1 h-px bg-gray-100"></div>
+            </div>
+
+            <button onclick="abrirWhatsappWebPedido()" class="w-full inline-flex items-center justify-center gap-2 border-2 border-black py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-all active:scale-95">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4l16 8-16 8 4-8-4-8z" />
+                </svg>
+                Ya tengo WhatsApp Web abierto
+            </button>
+
+            <button onclick="confirmarPedidoEnviadoDesdeQr()" class="mt-2.5 w-full bg-black text-white py-3 rounded-xl font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+                Ya envié el pedido
+            </button>
+
+            <button onclick="volverAlCarritoDesdeQr()" class="mt-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
+                Me olvidé de agregar algo
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL CONFLICTO CARRITO (Sin cambios) -->
+    <div id="modal-conflicto-carrito" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/85" onclick="cerrarConflictoCarrito()"></div>
+        <div class="bg-white w-full max-w-sm rounded-3xl relative z-10 p-6 sm:p-8 shadow-2xl animate-fade-in text-center">
+            <span class="w-14 h-14 rounded-full bg-yellow-400 text-black inline-flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h1.5l1.6 9.6a2 2 0 002 1.65h8.4a2 2 0 002-1.65L20 7.5H6" />
+                    <circle cx="9.5" cy="19.5" r="1.4" fill="currentColor" stroke="none"/>
+                    <circle cx="16.5" cy="19.5" r="1.4" fill="currentColor" stroke="none"/>
+                </svg>
+            </span>
+            <h3 class="text-xl font-900 uppercase italic mt-4 leading-tight">Un emprendedor<br>por carrito</h3>
+            <p class="text-gray-500 text-sm leading-relaxed mt-3">
+                Tu carrito ya tiene productos de <strong id="conflicto-tienda-actual" class="text-black">otra tienda</strong>. Para pedirle a otro emprendedor termina tu compra actual.
+            </p>
+            <div class="mt-7 flex flex-col gap-3">
+                <button onclick="confirmarReemplazoCarrito()" class="w-full bg-black text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+                    Vaciar carrito y agregar este
+                </button>
+                <button onclick="cerrarConflictoCarrito()" class="w-full border-2 border-black py-3.5 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-gray-50 transition-all active:scale-95">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST (Sin cambios) -->
+    <div id="toast-carrito" class="fixed bottom-6 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 mx-auto max-w-sm sm:max-w-md w-fit bg-black text-white px-5 sm:px-6 py-3 sm:py-3.5 rounded-2xl sm:rounded-full font-bold text-xs sm:text-sm uppercase tracking-widest shadow-2xl z-[110] hidden items-center justify-center text-center gap-2">
+        <svg class="w-4 h-4 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        <span id="toast-carrito-texto" class="leading-snug">Agregado al carrito</span>
+    </div>
+
+    <footer class="bg-black text-white px-4 sm:px-6 mt-12 sm:mt-20">
+
+    <!-- CTA superior -->
+    <div class="border-b border-zinc-800 py-8 sm:py-12">
+        <div class="container mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-center md:text-left">
+            <div>
+                <p class="text-yellow-400 text-[10px] font-black uppercase tracking-widest mb-1">¿Tenés algo para vender?</p>
+                <h3 class="text-2xl sm:text-3xl font-black uppercase italic leading-tight">TU TIENDA,<br>TU CIUDAD.</h3>
+            </div>
+            <button type="button" onclick="abrirModalPostulacion()" class="flex-shrink-0 bg-yellow-400 text-black font-black uppercase tracking-widest px-6 sm:px-8 py-3.5 sm:py-4 rounded-full hover:bg-white transition-all active:scale-95 text-sm">
+                Empezar a vender →
+            </button>
+        </div>
+    </div>
+
+    <!-- Cuerpo del footer -->
+    <div class="container mx-auto py-10 sm:py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 sm:gap-10 border-b border-zinc-800 text-center sm:text-left">
+
+        <!-- Col 1: Logo + descripción + redes -->
+        <div>
+            <div class="text-2xl font-black tracking-widest uppercase mb-1">
+                <span class="bg-yellow-400 text-black px-2 mr-1">COMUNIDAD</span>PLACE
+            </div>
+            <p class="text-yellow-400 text-[10px] font-black tracking-widest uppercase mb-4">
+                Fundación Transformando Realidades
+            </p>
+            <p class="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto sm:mx-0">
+                El marketplace de los emprendedores de tu ciudad. Comunidad Place - Comunidad Emprendedora.
+            </p>
+            <div class="flex justify-center sm:justify-start gap-4 mt-6">
+                <a href="#" title="Instagram" class="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-400 transition-all">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </a>
+                <a href="#" title="WhatsApp" class="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-400 transition-all">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.48 1.32 4.99L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.005c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.13-2.9-7C17.17 3.03 14.69 2 12.04 2zm5.8 14.13c-.24.68-1.4 1.32-1.93 1.4-.5.08-1.11.11-1.79-.11-.41-.13-.94-.31-1.61-.6-2.83-1.22-4.67-4.06-4.81-4.25-.14-.19-1.15-1.53-1.15-2.92s.72-2.07.98-2.35c.26-.28.56-.35.75-.35h.53c.17 0 .4-.02.62.48.24.55.81 1.9.88 2.04.07.14.11.3.02.49-.09.19-.14.31-.28.48-.14.16-.29.36-.42.48-.14.14-.28.29-.13.57.16.28.7 1.16 1.51 1.88 1.04.93 1.92 1.22 2.2 1.36.28.14.44.12.6-.07.16-.19.68-.79.87-1.06.19-.28.37-.23.62-.14.26.1 1.63.77 1.91.91.28.14.47.21.53.33.07.12.07.68-.17 1.36z"/></svg>
+                </a>
+                <a href="#" title="TikTok" class="w-9 h-9 border border-zinc-700 rounded-full flex items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-400 transition-all">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0 1 15.54 3h-3.09v12.4a2.592 2.592 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
+                </a>
+            </div>
+        </div>
+
+        <!-- Col 2: Explorar (anclas reales del sitio) -->
+        <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-5">Explorar</p>
+            <ul class="space-y-3">
+                <li><a href="#contenedor-productos" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Todos los productos</a></li>
+                <li><a href="#emprendedores-fila" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Emprendedores</a></li>
+                <li><a href="#filtros-container" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Categorías</a></li>
+            </ul>
+        </div>
+
+        <!-- Col 3: Tu cuenta -->
+        <div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-5">Tu cuenta</p>
+            <ul class="space-y-3">
+                <li><a href="#" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Vender en Comunidad Place</a></li>
+                <li><a href="javascript:void(0)" onclick="abrirCarrito()" class="text-sm font-bold uppercase hover:text-yellow-400 transition-colors">Ver carrito</a></li>
+            </ul>
+        </div>
+
+    </div>
+
+
+    <!-- Barra inferior -->
+<!-- Barra inferior -->
+    <div class="container mx-auto py-6 flex flex-col md:flex-row items-center justify-between gap-3">
+        <p class="text-zinc-600 text-[10px] tracking-widest uppercase font-bold italic text-center">Diseñado y desarrollado por Hostara · © 2026 - Todos los derechos reservados.</p>
+        <a href="legales.html" class="text-zinc-500 text-[10px] tracking-widest uppercase font-bold hover:text-yellow-400 transition-colors">Legales</a>
+    </div>
+
+
+
+</footer>
+
+    <!-- BOTÓN FLOTANTE: Volver arriba -->
+    <button id="btn-scroll-top"
+            type="button"
+            aria-label="Volver arriba"
+            onclick="window.scrollTo({top:0, behavior:'smooth'})"
+            class="fixed bottom-5 right-4 sm:right-6 z-[95] w-12 h-12 rounded-full bg-black text-yellow-400 shadow-2xl flex items-center justify-center opacity-0 pointer-events-none translate-y-3 transition-all duration-300 hover:bg-yellow-400 hover:text-black active:scale-95">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+        </svg>
+    </button>
+
+    <script src="supabase-client.js"></script>
+    <script src="emprendedor.js"></script>
+</body>
+</html>

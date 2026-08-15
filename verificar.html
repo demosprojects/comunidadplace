@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a1128">
+    <title>Verificación de Credencial | Comunidad Place</title>
+    <link rel="shortcut icon" href="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp">
+    
+    <!-- Tipografía acorde a la web -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', 'sans-serif'],
+                    },
+                    colors: {
+                        obsidian: '#0b0c10',
+                        deepblue: '#0a1128',
+                        skyaccent: '#3b82f6',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+
+        /* Fondo azul moderno: degradado profundo + resplandores + textura sutil */
+        .bg-app {
+            background-color: #060a1a;
+            background-image:
+                radial-gradient(circle at 15% 8%, rgba(56, 189, 248, 0.22), transparent 45%),
+                radial-gradient(circle at 88% 18%, rgba(99, 102, 241, 0.20), transparent 50%),
+                radial-gradient(circle at 50% 100%, rgba(30, 64, 175, 0.35), transparent 60%),
+                linear-gradient(160deg, #05070f 0%, #0a1128 45%, #060913 100%);
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-app::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M0 0h1v1H0zM30 30h1v1h-1z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Soporte para notch / safe areas en mobile */
+        .safe-px { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+        .safe-py { padding-top: max(1.25rem, env(safe-area-inset-top)); padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
+    </style>
+</head>
+<body class="bg-app min-h-[100dvh] flex flex-col items-center justify-center safe-px safe-py">
+
+    <!-- Marca / Header minimalista -->
+    <div class="mb-6 sm:mb-8 text-center animate-fade-in">
+        <div class="w-11 h-11 sm:w-12 sm:h-12 mx-auto bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-400/30 mb-3">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+            </svg>
+        </div>
+        <span class="block text-[10px] font-black tracking-[0.25em] text-sky-300 uppercase">Comunidad</span>
+        <span class="block text-xl font-900 tracking-wide uppercase text-white -mt-0.5">Place</span>
+    </div>
+
+    <!-- Contenedor Principal (Tarjeta) -->
+    <div class="w-full max-w-sm bg-white rounded-[28px] sm:rounded-[32px] shadow-2xl shadow-black/40 border border-white/10 overflow-hidden relative animate-fade-in">
+        
+        <!-- ESTADO 1: Cargando -->
+        <div id="estado-cargando" class="flex flex-col items-center justify-center py-14 sm:py-16 px-5 sm:px-6">
+            <svg class="w-10 h-10 animate-spin text-sky-500 mb-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <h2 class="text-base sm:text-lg font-900 uppercase italic text-gray-800">Verificando...</h2>
+            <p class="text-sm text-gray-400 mt-1 text-center">Buscando credencial en el sistema</p>
+        </div>
+
+        <!-- ESTADO 2: Activo (Verde) -->
+        <div id="estado-activo" class="hidden flex-col items-center pt-7 sm:pt-8 pb-8 sm:pb-10 px-5 sm:px-6 text-center">
+            <div class="relative mb-4">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 relative z-10">
+                    <svg class="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <div class="absolute inset-0 bg-emerald-400 rounded-full" style="animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;"></div>
+            </div>
+            
+            <h2 class="text-xl sm:text-2xl font-900 uppercase italic text-emerald-600 tracking-tight">Credencial Válida</h2>
+            <p class="text-[11px] sm:text-xs font-bold uppercase tracking-widest text-emerald-500/70 mt-1 mb-5 sm:mb-6">Emprendedor Activo</p>
+
+            <div class="w-full bg-gray-50 rounded-2xl p-4 sm:p-5 border border-gray-100 text-left space-y-3">
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Nombre Completo</p>
+                    <p id="data-nombre-real" class="text-base sm:text-lg font-900 text-obsidian capitalize leading-tight break-words">Cargando...</p>
+                </div>
+                <div class="h-px w-full bg-gray-200"></div>
+                <div>
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">DNI</p>
+                    <p id="data-dni" class="text-lg sm:text-xl font-black text-obsidian tracking-wide">Cargando...</p>
+                </div>
+                <div class="h-px w-full bg-gray-200"></div>
+                <div class="flex items-center gap-3">
+                    <img id="data-logo" src="" class="w-10 h-10 shrink-0 rounded-lg object-cover bg-white border border-gray-200 hidden">
+                    <div id="data-logo-fallback" class="w-10 h-10 shrink-0 rounded-lg bg-deepblue text-white flex items-center justify-center font-black hidden">?</div>
+                    <div class="min-w-0">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Emprendimiento</p>
+                        <p id="data-negocio" class="text-sm font-bold text-obsidian break-words">Cargando...</p>
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-[11px] font-semibold text-gray-400 mt-5 sm:mt-6 leading-relaxed">
+                Por favor, solicitá el DNI físico para corroborar la identidad antes de aplicar el descuento.
+            </p>
+        </div>
+
+        <!-- ESTADO 3: Inválido (Rojo) -->
+        <div id="estado-invalido" class="hidden flex-col items-center py-10 sm:py-12 px-5 sm:px-6 text-center">
+            <div class="w-16 h-16 sm:w-20 sm:h-20 bg-red-500 rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 mb-4">
+                <svg class="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </div>
+            
+            <h2 class="text-xl sm:text-2xl font-900 uppercase italic text-red-600 tracking-tight">Inválida</h2>
+            <p id="msg-invalido" class="text-sm font-semibold text-gray-600 mt-3 leading-relaxed">
+                Esta credencial no existe o el emprendedor se encuentra bloqueado actualmente.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Script de lógica de validación -->
+    <script src="supabase-client.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const emprendedorId = urlParams.get('id');
+
+            const vistaCargando = document.getElementById('estado-cargando');
+            const vistaActivo = document.getElementById('estado-activo');
+            const vistaInvalido = document.getElementById('estado-invalido');
+
+            // Función auxiliar para mostrar la vista correspondiente
+            const mostrarVista = (vista) => {
+                vistaCargando.classList.add('hidden');
+                vistaCargando.classList.remove('flex');
+                vistaActivo.classList.add('hidden');
+                vistaActivo.classList.remove('flex');
+                vistaInvalido.classList.add('hidden');
+                vistaInvalido.classList.remove('flex');
+
+                vista.classList.remove('hidden');
+                vista.classList.add('flex');
+            };
+
+            if (!emprendedorId) {
+                document.getElementById('msg-invalido').textContent = "Código de credencial no detectado en el enlace.";
+                mostrarVista(vistaInvalido);
+                return;
+            }
+
+            try {
+                // Consulta a Supabase mediante una función RPC (ver supabase-credencial-setup.sql).
+                // No se usa un SELECT directo a la tabla 'emprendedores': con el anon key
+                // públicamente visible en el JS, un SELECT directo permitiría a cualquiera
+                // descargar el DNI de TODOS los emprendedores en una sola consulta. La función
+                // sólo devuelve un registro por vez y sólo los campos necesarios.
+                const { data, error } = await supabase
+                    .rpc('verificar_credencial', { p_id: emprendedorId });
+
+                const fila = Array.isArray(data) ? data[0] : data;
+
+                if (error || !fila || !fila.existe) {
+                    mostrarVista(vistaInvalido);
+                    return;
+                }
+
+                if (fila.activo === false) {
+                    document.getElementById('msg-invalido').textContent = "El emprendedor figura como Inactivo en la plataforma.";
+                    mostrarVista(vistaInvalido);
+                    return;
+                }
+
+                // Llenar datos si es válido
+                document.getElementById('data-nombre-real').textContent = fila.nombre_real || "Sin nombre registrado";
+                document.getElementById('data-dni').textContent = fila.dni || "Sin DNI registrado";
+                document.getElementById('data-negocio').textContent = fila.nombre_tienda || "Sin nombre de tienda";
+
+                const logo = document.getElementById('data-logo');
+                const fallback = document.getElementById('data-logo-fallback');
+
+                if (fila.logo_url) {
+                    logo.src = fila.logo_url;
+                    logo.classList.remove('hidden');
+                    fallback.classList.add('hidden');
+                } else {
+                    fallback.textContent = (fila.nombre_tienda || '?').charAt(0).toUpperCase();
+                    fallback.classList.remove('hidden');
+                    logo.classList.add('hidden');
+                }
+
+                mostrarVista(vistaActivo);
+
+            } catch (err) {
+                console.error("Error validando credencial:", err);
+                document.getElementById('msg-invalido').textContent = "Error de conexión al intentar validar.";
+                mostrarVista(vistaInvalido);
+            }
+        });
+    </script>
+</body>
+</html>
