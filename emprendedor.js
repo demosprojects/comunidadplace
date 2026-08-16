@@ -390,7 +390,17 @@ function aplicarBusqueda() {
         ? productos
         : productos.filter(p => p.nombre.toLowerCase().includes(texto));
 
+    const btnClear = document.getElementById('buscador-emprendedor-clear');
+    if (btnClear) btnClear.classList.toggle('hidden', texto === '');
+
     mostrarProductos(filtrados);
+}
+
+// Vacía el buscador de esta tienda y vuelve a mostrar todo el catálogo.
+function limpiarBusquedaEmprendedor() {
+    const input = document.getElementById('buscador-emprendedor');
+    if (input) input.value = '';
+    aplicarBusqueda();
 }
 
 // ============================================================
@@ -444,26 +454,49 @@ function mostrarProductos(lista) {
 
     if (lista.length === 0) {
         contenedor.dataset.vacio = '1';
-        const nombreTienda = escapeHtml((emprendedorActual && emprendedorActual.nombre_tienda) || 'Esta tienda');
-        contenedor.innerHTML = `
-            <div class="col-span-full flex flex-col items-center justify-center text-center py-16 sm:py-24 px-4 animate-fade-in">
-                <div class="relative mb-6">
-                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center shadow-xl rotate-3">
-                        <svg class="w-9 h-9 sm:w-10 sm:h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                        </svg>
+
+        // Dos casos bien distintos comparten "lista vacía":
+        // 1) La tienda todavía no cargó ningún producto (catálogo real vacío).
+        // 2) Hay productos, pero la búsqueda no encontró ninguno.
+        // Antes se mostraba siempre el mensaje de "catálogo vacío", incluso
+        // buscando algo que la tienda sí tiene pero no coincide con nada.
+        if (productos.length === 0) {
+            const nombreTienda = escapeHtml((emprendedorActual && emprendedorActual.nombre_tienda) || 'Esta tienda');
+            contenedor.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center text-center py-16 sm:py-24 px-4 animate-fade-in">
+                    <div class="relative mb-6">
+                        <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center shadow-xl rotate-3">
+                            <svg class="w-9 h-9 sm:w-10 sm:h-10 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </div>
+                        <span class="absolute -bottom-2 -right-2 w-9 h-9 rounded-full bg-black text-yellow-400 flex items-center justify-center text-base border-4 border-white shadow-lg -rotate-6">⏳</span>
                     </div>
-                    <span class="absolute -bottom-2 -right-2 w-9 h-9 rounded-full bg-black text-yellow-400 flex items-center justify-center text-base border-4 border-white shadow-lg -rotate-6">⏳</span>
-                </div>
-                <h3 class="text-xl sm:text-2xl font-900 uppercase italic text-zinc-900 leading-tight">Todavía sin productos</h3>
-                <p class="text-gray-500 text-sm sm:text-base max-w-sm mt-2.5 leading-relaxed">
-                    ${nombreTienda} está preparando su catálogo. Volvé pronto o mientras tanto descubrí otras tiendas de la comunidad.
-                </p>
-                <a href="index.html#contenedor-productos" class="inline-flex items-center gap-2 mt-7 bg-black text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl">
-                    Explorar otros productos
-                    <span>→</span>
-                </a>
-            </div>`;
+                    <h3 class="text-xl sm:text-2xl font-900 uppercase italic text-zinc-900 leading-tight">Todavía sin productos</h3>
+                    <p class="text-gray-500 text-sm sm:text-base max-w-sm mt-2.5 leading-relaxed">
+                        ${nombreTienda} está preparando su catálogo. Volvé pronto o mientras tanto descubrí otras tiendas de la comunidad.
+                    </p>
+                    <a href="index.html#contenedor-productos" class="inline-flex items-center gap-2 mt-7 bg-black text-white px-6 sm:px-7 py-3 sm:py-3.5 rounded-full font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl">
+                        Explorar otros productos
+                        <span>→</span>
+                    </a>
+                </div>`;
+        } else {
+            contenedor.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center text-center py-20">
+                    <span class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-5">
+                        <svg class="w-7 h-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                            <path stroke-linecap="round" d="M9.3 9.3l3.4 3.4m0-3.4l-3.4 3.4" />
+                        </svg>
+                    </span>
+                    <p class="font-black text-sm uppercase tracking-widest">Sin resultados</p>
+                    <p class="text-gray-400 text-xs mt-1.5 max-w-[15rem]">No encontramos productos de esta tienda con esa búsqueda.</p>
+                    <button onclick="limpiarBusquedaEmprendedor()" class="mt-6 border-2 border-black px-6 py-2.5 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-black hover:text-white transition-all active:scale-95">
+                        Limpiar búsqueda
+                    </button>
+                </div>`;
+        }
         return;
     }
 
@@ -1413,12 +1446,12 @@ function mostrarModalQrPedido(telefono, mensaje) {
 
     const cont = document.getElementById('qr-pedido-canvas');
     cont.innerHTML = `
-        <div class="flex flex-col items-center gap-2 text-gray-300">
-            <svg class="w-7 h-7 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <div class="flex flex-col items-center gap-3 text-gray-300">
+            <svg class="w-10 h-10 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <circle cx="12" cy="12" r="9" stroke-opacity="0.25"></circle>
                 <path d="M21 12a9 9 0 00-9-9" stroke-linecap="round"></path>
             </svg>
-            <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">Generando QR</span>
+            <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Cargando QR...</span>
         </div>
     `;
     document.getElementById('modal-qr-pedido').classList.remove('hidden');
@@ -1429,7 +1462,7 @@ function mostrarModalQrPedido(telefono, mensaje) {
         cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
         return;
     }
-    QRCode.toCanvas(urlWaMe, { width: 176, margin: 1 }, (error, canvas) => {
+    QRCode.toCanvas(urlWaMe, { width: 260, margin: 1 }, (error, canvas) => {
         if (error) {
             console.error('No se pudo generar el QR del pedido', error);
             cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
@@ -1441,10 +1474,16 @@ function mostrarModalQrPedido(telefono, mensaje) {
 }
 
 // Botón "Ya tengo WhatsApp Web abierto": abre WhatsApp Web en una pestaña
-// nueva con el pedido ya redactado, para quienes no necesitan el QR.
+// nueva con el pedido ya redactado, para quienes no necesitan el QR. Damos
+// el pedido por enviado: cerramos el modal y vaciamos el carrito, igual que
+// con "Ya envié el pedido".
 function abrirWhatsappWebPedido() {
     if (!_qrPedidoUrlWhatsappWeb) return;
     window.open(_qrPedidoUrlWhatsappWeb, '_blank');
+    document.getElementById('modal-qr-pedido').classList.add('hidden');
+    desbloquearScrollBody();
+    _qrPedidoUrlWhatsappWeb = null;
+    finalizarPedido();
 }
 
 // Antes de dejar salir del modal de QR (X o click afuera), confirma si el
@@ -1534,6 +1573,15 @@ async function enviarPedidoWhatsapp() {
     // Si hubo un error de red al validar, seguimos igual: no queremos
     // bloquear el pedido por un problema de conexión momentáneo.
 
+    // Armamos la base del link de vuelta a esta tienda (igual que en index.html,
+    // pero acá hay que conservar el slug/id de la tienda con "?t=" o "?id=" para
+    // que el link de cada producto abra directo en el perfil correcto).
+    const slugTienda = (emprendedorActual && emprendedorActual.usuarios && emprendedorActual.usuarios.usuario)
+        || new URLSearchParams(window.location.search).get('t');
+    const baseUrl = slugTienda
+        ? `${window.location.origin}${window.location.pathname}?t=${encodeURIComponent(slugTienda)}`
+        : `${window.location.origin}${window.location.pathname}?id=${encodeURIComponent(carrito.emprendedorId || '')}`;
+
     const quiereEnvioMsg = carrito.envioSeleccionado !== false;
 
     let msg = `Hola ${carrito.emprendedorNombre}! Quiero hacer este pedido desde ComunidadPlace:\n\n`;
@@ -1544,6 +1592,7 @@ async function enviarPedidoWhatsapp() {
         msg += `${idx + 1}. ${i.nombre}`;
         if (i.variantesTexto) msg += ` (${i.variantesTexto})`;
         msg += ` x${i.cantidad} - ${formatoPrecio(i.precioUnitario * i.cantidad)}\n`;
+        if (i.productoId) msg += `   ${baseUrl}&producto=${i.productoId}\n`;
     });
     const envioMsg = quiereEnvioMsg ? (carrito.costoEnvio || 0) : 0;
     if (envioMsg > 0) {
