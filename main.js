@@ -2068,6 +2068,23 @@ function actualizarProgresoPostulacion(pasoActivo) {
     document.getElementById('progreso-punto-2').textContent = '2';
 }
 
+// Al presionar Enter en un input del paso 1, el navegador dispara el submit
+// del form usando el botón "Enviar postulación" del paso 2 (aunque esté
+// oculto), y eso termina mostrando el error de "campos incompletos" en vez
+// de avanzar al paso 2. Interceptamos el Enter para que se comporte como
+// "Continuar"/"Enviar" según el paso en el que esté el usuario.
+document.getElementById('form-postulacion').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || e.target.tagName === 'TEXTAREA') return;
+
+    const enPaso1 = !document.getElementById('postulacion-form-paso-1').classList.contains('hidden');
+    if (enPaso1) {
+        e.preventDefault();
+        irAPasoFormulario(2);
+    }
+    // Si ya está en el paso 2, dejamos que el Enter dispare el submit normal
+    // (el botón "Enviar postulación" ya es el submit visible en ese paso).
+});
+
 document.getElementById('form-postulacion').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -2084,9 +2101,10 @@ document.getElementById('form-postulacion').addEventListener('submit', async (e)
         mensaje: document.getElementById('post-mensaje').value.trim(),
     };
 
-    // Todos los campos son obligatorios: además del required nativo del HTML,
-    // lo revalidamos acá por si el formulario se envía por otra vía.
-    const camposFaltantes = Object.entries(datos).some(([, valor]) => !valor);
+    // Todos los campos son obligatorios excepto instagram (es opcional):
+    // además del required nativo del HTML, lo revalidamos acá por si el
+    // formulario se envía por otra vía.
+    const camposFaltantes = Object.entries(datos).some(([campo, valor]) => campo !== 'instagram' && !valor);
     if (camposFaltantes) {
         mostrarToast('Completá todos los campos para enviar la postulación.', 'error');
         return;
