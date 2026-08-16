@@ -151,6 +151,12 @@ async function cargarEmprendedor(slug, idLegacy, productoIdDesdeLink) {
 // desde otra pestaña/dispositivo, esta página se actualiza sola
 // ============================================================
 function iniciarRealtimeEmprendedor(id) {
+    // canalProductos y canalVariantes se dan de baja mientras la tienda
+    // está bloqueada y se vuelven a crear si se reactiva, así que van en
+    // variables mutables (no const) para poder reasignarlas más abajo.
+    let canalProductos, canalVariantes;
+    let tiendaBloqueada = false;
+
     const refrescarProductos = debounce(async () => {
         await cargarProductosDelEmprendedor(id);
         aplicarBusqueda();
@@ -162,15 +168,44 @@ function iniciarRealtimeEmprendedor(id) {
     const refrescarPerfil = debounce(async () => {
         const { data, error } = await supabase.from('emprendedores').select('*').eq('id', id).eq('activo', true).single();
         if (error || !data) {
-            mostrarError();
-            // La tienda se bloqueó: dejamos de escuchar cambios, ya no
-            // tiene sentido seguir gastando conexiones/requests en una
-            // página que quedó mostrando el cartel de error.
-            [canalProductos, canalEmprendedor, canalVariantes].forEach(c => c && supabase.removeChannel(c));
+            if (!tiendaBloqueada) {
+                tiendaBloqueada = true;
+                mostrarError();
+                // La tienda se bloqueó: dejamos de escuchar productos y
+                // variantes (no tiene sentido seguir gastando conexiones
+                // en una página que quedó mostrando el cartel de error),
+                // pero OJO: seguimos suscriptos al canal de "emprendedores"
+                // (canalEmprendedor, más abajo) para enterarnos apenas la
+                // vuelvan a activar y poder restaurar la página sola.
+                [canalProductos, canalVariantes].forEach(c => c && supabase.removeChannel(c));
+                canalProductos = null;
+                canalVariantes = null;
+            }
             return;
         }
+
         emprendedorActual = data;
         renderPerfil(data);
+
+        if (tiendaBloqueada) {
+            // Se estaba mostrando el cartel de error y la tienda se
+            // volvió a activar: restauramos la página sin que el
+            // visitante tenga que refrescar manualmente.
+            tiendaBloqueada = false;
+            document.getElementById('perfil-error').classList.add('hidden');
+            document.getElementById('perfil-contenido').classList.remove('hidden');
+            document.getElementById('seccion-productos').classList.remove('hidden');
+
+            await cargarProductosDelEmprendedor(id);
+            aplicarBusqueda();
+            sincronizarDisponibilidadCarrito();
+
+            // Nos volvemos a suscribir a productos/variantes, que se
+            // habían dado de baja al bloquearse la tienda (sin filtro en
+            // productos, ver comentario en la suscripción inicial más abajo).
+            canalProductos = suscribirTabla('productos', refrescarProductos);
+            canalVariantes = suscribirTabla('variantes', refrescarVariantesModal);
+        }
     }, 350);
 
     // Si se edita una variante mientras alguien tiene el modal de ese
@@ -186,9 +221,18 @@ function iniciarRealtimeEmprendedor(id) {
         actualizarPrecioYWhatsapp();
     }, 350);
 
-    const canalProductos = suscribirTabla('productos', refrescarProductos, `emprendedor_id=eq.${id}`);
+    // OJO: sin filtro (a diferencia del canal de "emprendedores" de abajo).
+    // Supabase Realtime, en un DELETE, solo puede aplicar un filtro por una
+    // columna que no sea la primary key si la tabla tiene REPLICA IDENTITY
+    // FULL; "productos" no la tiene, así que un filtro acá por
+    // emprendedor_id hacía que los DELETE nunca matchearan y el evento se
+    // perdía (el producto borrado seguía viéndose hasta recargar la
+    // página). Escuchamos todos los cambios de la tabla, igual que hace
+    // index.html, y ya filtramos por esta tienda al volver a pedir los
+    // productos en refrescarProductos/cargarProductosDelEmprendedor.
+    canalProductos = suscribirTabla('productos', refrescarProductos);
     const canalEmprendedor = suscribirTabla('emprendedores', refrescarPerfil, `id=eq.${id}`);
-    const canalVariantes = suscribirTabla('variantes', refrescarVariantesModal);
+    canalVariantes = suscribirTabla('variantes', refrescarVariantesModal);
 }
 
 async function cargarProductosDelEmprendedor(emprendedorId) {
