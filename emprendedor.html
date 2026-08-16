@@ -500,8 +500,14 @@
                 <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
                 </svg>
-                <input type="text" id="buscador-emprendedor" placeholder="Buscar en sus productos..."
-                    class="w-full bg-gray-50 border-2 border-gray-200 rounded-full py-2.5 pl-11 pr-5 text-sm focus:outline-none focus:border-yellow-400 focus:bg-white transition-all placeholder:text-gray-400">
+                <input type="text" id="buscador-emprendedor" placeholder="Buscar en sus productos..." autocomplete="off"
+                    class="w-full bg-gray-50 border-2 border-gray-200 rounded-full py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:border-yellow-400 focus:bg-white transition-all placeholder:text-gray-400">
+                <button type="button" id="buscador-emprendedor-clear" onclick="limpiarBusquedaEmprendedor()" aria-label="Limpiar búsqueda"
+                    class="hidden absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black transition-colors p-0.5">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M6 18L18 6" />
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -694,7 +700,7 @@
         <div class="absolute inset-0 bg-black/85" onclick="cerrarModalMediosPago()"></div>
         <div class="bg-white w-full max-w-sm rounded-3xl relative z-10 p-6 shadow-2xl animate-fade-in">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-900 uppercase italic leading-tight">Medios de pago<br>disponibles</h3>
+                <h3 class="text-base font-900 uppercase italic leading-tight">Medios de pago disponibles</h3>
                 <button onclick="cerrarModalMediosPago()" class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-black transition-colors" aria-label="Cerrar">✕</button>
             </div>
             <div id="modal-medios-pago-lista" class="flex flex-wrap gap-2"></div>
@@ -704,38 +710,45 @@
     <!-- MODAL QR PEDIDO: en PC, escaneás con el celular para abrir WhatsApp -->
     <div id="modal-qr-pedido" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/85" onclick="intentarCerrarModalQr()"></div>
-        <div class="bg-white w-full max-w-[300px] rounded-3xl relative z-10 p-5 shadow-2xl animate-fade-in text-center">
-            <button onclick="intentarCerrarModalQr()" aria-label="Cerrar" class="absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-black transition-colors text-xs">✕</button>
+        <div class="bg-white w-full max-w-[440px] rounded-3xl relative z-10 p-8 shadow-2xl animate-fade-in text-center">
+            <button onclick="intentarCerrarModalQr()" aria-label="Cerrar" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-black transition-colors text-sm">✕</button>
 
-            <h3 class="text-base font-900 uppercase italic leading-tight pr-6">Escaneá y enviá tu pedido</h3>
-            <p class="text-gray-400 text-[11px] font-semibold leading-snug mt-1">
+            <h3 class="text-xl font-900 uppercase italic leading-tight pr-6">Escaneá y enviá tu pedido</h3>
+            <p class="text-gray-400 text-xs font-semibold leading-snug mt-1.5">
                 Apuntá la cámara del celular al código
             </p>
 
-            <div class="mt-4 flex items-center justify-center">
-                <div id="qr-pedido-canvas" class="w-[176px] h-[176px] flex items-center justify-center bg-white rounded-2xl border border-gray-100">
-                    <!-- loader o canvas del QR, generado por JS -->
+            <div class="mt-6 flex items-center justify-center">
+                <!-- Marco decorativo tipo "visor de escaneo" alrededor del QR -->
+                <div class="relative p-5 bg-white rounded-2xl border border-gray-100">
+                    <span class="absolute -top-0.5 -left-0.5 w-7 h-7 border-t-[3px] border-l-[3px] border-black rounded-tl-xl"></span>
+                    <span class="absolute -top-0.5 -right-0.5 w-7 h-7 border-t-[3px] border-r-[3px] border-black rounded-tr-xl"></span>
+                    <span class="absolute -bottom-0.5 -left-0.5 w-7 h-7 border-b-[3px] border-l-[3px] border-black rounded-bl-xl"></span>
+                    <span class="absolute -bottom-0.5 -right-0.5 w-7 h-7 border-b-[3px] border-r-[3px] border-black rounded-br-xl"></span>
+                    <div id="qr-pedido-canvas" class="w-[260px] h-[260px] flex items-center justify-center bg-white rounded-lg">
+                        <!-- loader o canvas del QR, generado por JS -->
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 my-4">
+            <div class="flex items-center gap-2 my-6">
                 <div class="flex-1 h-px bg-gray-100"></div>
-                <span class="text-[9px] font-black uppercase tracking-widest text-gray-300">o</span>
+                <span class="text-[10px] font-black uppercase tracking-widest text-gray-300">o</span>
                 <div class="flex-1 h-px bg-gray-100"></div>
             </div>
 
-            <button onclick="abrirWhatsappWebPedido()" class="w-full inline-flex items-center justify-center gap-2 border-2 border-black py-2.5 rounded-xl font-bold uppercase text-[10px] tracking-widest hover:bg-gray-50 transition-all active:scale-95">
-                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+            <button onclick="abrirWhatsappWebPedido()" class="w-full inline-flex items-center justify-center gap-2 border-2 border-black py-3 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-gray-50 transition-all active:scale-95">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4l16 8-16 8 4-8-4-8z" />
                 </svg>
                 Ya tengo WhatsApp Web abierto
             </button>
 
-            <button onclick="confirmarPedidoEnviadoDesdeQr()" class="mt-2.5 w-full bg-black text-white py-3 rounded-xl font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+            <button onclick="confirmarPedidoEnviadoDesdeQr()" class="mt-3 w-full bg-black text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
                 Ya envié el pedido
             </button>
 
-            <button onclick="volverAlCarritoDesdeQr()" class="mt-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
+            <button onclick="volverAlCarritoDesdeQr()" class="mt-3.5 text-[11px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
                 Me olvidé de agregar algo
             </button>
         </div>
