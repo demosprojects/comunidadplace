@@ -490,9 +490,14 @@ function mostrarProductos(lista) {
         contenedor.dataset.vacio = '1';
         contenedor.innerHTML = `
             <div class="col-span-full flex flex-col items-center justify-center text-center py-20">
-                <span class="text-4xl mb-4">🔍</span>
-                <p class="text-gray-500 font-bold">No encontramos productos con esos filtros.</p>
-                <p class="text-gray-400 text-sm mt-1">Probá con otra categoría, tienda o búsqueda.</p>
+                <span class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-5">
+                    <svg class="w-7 h-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+                        <path stroke-linecap="round" d="M9.3 9.3l3.4 3.4m0-3.4l-3.4 3.4" />
+                    </svg>
+                </span>
+                <p class="font-black text-sm uppercase tracking-widest">Sin resultados</p>
+                <p class="text-gray-400 text-xs mt-1.5 max-w-[15rem]">No encontramos productos con esos filtros. Probá con otra categoría, tienda o búsqueda.</p>
                 <button onclick="limpiarFiltros()" class="mt-6 border-2 border-black px-6 py-2.5 rounded-full font-bold uppercase text-xs tracking-widest hover:bg-black hover:text-white transition-all active:scale-95">
                     Limpiar filtros
                 </button>
