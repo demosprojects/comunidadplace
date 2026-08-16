@@ -167,15 +167,21 @@
     <nav id="site-header" class="bg-[#0b0c10] text-white fixed top-0 left-0 right-0 z-50 border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
         <div class="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap md:flex-nowrap items-center gap-x-4 sm:gap-x-6 gap-y-3 justify-between">
 
-            <div class="order-1 flex items-center gap-2 sm:gap-2.5 flex-shrink-0 cursor-pointer select-none group" onclick="window.location.reload()">
-                <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_2px_14px_rgba(250,204,21,0.35)] group-hover:-rotate-6 group-active:scale-90 transition-transform duration-300">
-                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
-                    </svg>
+            <div class="order-1 flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                <div class="flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none group" onclick="window.location.reload()">
+                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_2px_14px_rgba(250,204,21,0.35)] group-hover:-rotate-6 group-active:scale-90 transition-transform duration-300">
+                        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+                        </svg>
+                    </div>
+                    <div class="leading-none group-hover:opacity-80 transition-opacity">
+                        <span class="block text-[8px] sm:text-[9px] font-black tracking-[0.25em] text-yellow-400 uppercase">Comunidad</span>
+                        <span class="block text-base sm:text-xl font-900 tracking-wide uppercase -mt-0.5">Place</span>
+                    </div>
                 </div>
-                <div class="leading-none group-hover:opacity-80 transition-opacity">
-                    <span class="block text-[8px] sm:text-[9px] font-black tracking-[0.25em] text-yellow-400 uppercase">Comunidad</span>
-                    <span class="block text-base sm:text-xl font-900 tracking-wide uppercase -mt-0.5">Place</span>
+
+                <div class="bg-white rounded-lg sm:rounded-xl px-2 py-0.5 sm:px-2.5 sm:py-1 shadow-sm flex items-center justify-center flex-shrink-0">
+                    <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786837911/rj2sqt2p6aivmjuo5e1t.webp" alt="Villa Ángela" title="Villa Ángela" class="h-9 sm:h-12 w-auto object-contain">
                 </div>
             </div>
 
@@ -833,14 +839,14 @@
     </div>
 
     <!-- Aliados: Con el apoyo de -->
-    <div class="container mx-auto py-6 sm:py-8 border-b border-zinc-800 flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-4 text-center sm:text-left">
-        <p class="text-zinc-500 text-[10px] font-black uppercase tracking-widest">Con el apoyo de</p>
+    <div class="container mx-auto py-6 sm:py-8 border-b border-zinc-800 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-center sm:text-left">
+        <p class="text-zinc-500 text-[10px] font-black uppercase tracking-widest flex-shrink-0">Con el apoyo de</p>
         <div class="flex items-center gap-4 sm:gap-5">
-            <div class="bg-white rounded-lg sm:rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm flex items-center justify-center">
-                <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786838337/z8dw4oyr9zezx7mdiafy.webp" alt="Comunidad Emprendedora" title="Comunidad Emprendedora" class="h-7 sm:h-9 w-auto object-contain">
+            <div class="bg-white rounded-lg sm:rounded-xl px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 shadow-sm flex items-center justify-center">
+                <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786838337/z8dw4oyr9zezx7mdiafy.webp" alt="Comunidad Emprendedora" title="Comunidad Emprendedora" class="h-7 sm:h-12 w-auto object-contain">
             </div>
-            <div class="bg-white rounded-lg sm:rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-sm flex items-center justify-center">
-                <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786837911/rj2sqt2p6aivmjuo5e1t.webp" alt="Villa Ángela" title="Villa Ángela" class="h-7 sm:h-9 w-auto object-contain">
+            <div class="bg-white rounded-lg sm:rounded-xl px-2.5 py-1.5 sm:px-3.5 sm:py-2.5 shadow-sm flex items-center justify-center">
+                <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786837911/rj2sqt2p6aivmjuo5e1t.webp" alt="Villa Ángela" title="Villa Ángela" class="h-7 sm:h-12 w-auto object-contain">
             </div>
         </div>
     </div>
