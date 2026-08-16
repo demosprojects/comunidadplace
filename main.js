@@ -424,11 +424,70 @@ function precargarImagenesProductos() {
 // ============================================================
 // RENDER DE CARDS
 // ============================================================
+function crearCardHtmlProducto(p) {
+    const tienda = p.emprendedores ? p.emprendedores.nombre_tienda : '';
+    const logoTienda = p.emprendedores ? p.emprendedores.logo_url : '';
+    const inicialTienda = tienda ? tienda.charAt(0).toUpperCase() : '?';
+    const avatarTienda = logoTienda
+        ? `<img src="${miniaturaCloudinary(logoTienda, 60)}" alt="${escapeHtml(tienda)}" class="w-4 h-4 sm:w-6 sm:h-6 rounded-full object-cover flex-shrink-0 ring-1 ring-black/5" loading="lazy" decoding="async">`
+        : `<span class="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-yellow-400 text-black text-[7px] sm:text-[10px] font-black flex items-center justify-center flex-shrink-0">${escapeHtml(inicialTienda)}</span>`;
+    const descuentoPct = calcularDescuentoPorcentaje(p.precio_anterior, p.precio);
+    // data-hash guarda una foto de los datos que afectan el render de esta
+    // card: sirve para que mostrarProductos() sepa si tiene que redibujarla
+    // o puede dejarla tal cual (evita el parpadeo al llegar cambios por
+    // tiempo real de OTROS productos/otros emprendedores).
+    const hash = escapeHtml(JSON.stringify({
+        n: p.nombre, pr: p.precio, pa: p.precio_anterior, img: p.imagen_url,
+        cat: p.categorias ? p.categorias.nombre : null,
+        t: tienda, l: logoTienda, nv: esProductoNuevoVigente(p)
+    }));
+    return `
+        <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl lg:rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" data-producto-id="${p.id}" data-hash="${hash}" onclick="verDetalles('${p.id}')">
+            <div class="relative aspect-[4/5] lg:aspect-[4/3] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
+                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 lg:p-3.5 transition duration-300" loading="lazy" decoding="async">
+                ${esProductoNuevoVigente(p) ? `
+                <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-yellow-400 text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Nuevo</span>` : ''}
+            </div>
+            <div class="p-2.5 sm:p-5 lg:p-3.5 flex flex-col flex-1">
+                <div class="flex items-center gap-1.5 sm:gap-2 lg:gap-1.5 mb-1.5 sm:mb-2 lg:mb-1 pr-2.5 py-0.5 sm:py-1 flex-shrink-0">
+                    ${avatarTienda}
+                    <span class="text-gray-500 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest truncate flex-1">${escapeHtml(tienda)}</span>
+                </div>
+                <h3 class="font-black text-xs sm:text-lg lg:text-sm leading-snug group-hover:text-yellow-600 transition-colors min-h-[2.4em] sm:min-h-[2.6em] lg:min-h-[2.4em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
+                <span class="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5 sm:mt-1">${p.categorias ? escapeHtml(p.categorias.nombre) : 'General'}</span>
+                <div class="flex items-center justify-between mt-auto pt-2 sm:pt-4 lg:pt-2">
+                    <div class="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
+                        <span class="font-900 text-sm sm:text-xl lg:text-base">${formatoPrecio(p.precio)}</span>
+                        ${descuentoPct > 0 ? `
+                            <span class="text-[9px] sm:text-xs font-bold text-gray-400 line-through">${formatoPrecio(p.precio_anterior)}</span>
+                            <span class="text-[7px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-600 text-white">-${descuentoPct}% OFF</span>
+                        ` : ''}
+                    </div>
+                    <span class="w-7 h-7 sm:w-10 sm:h-10 lg:w-8 lg:h-8 rounded-full bg-black text-white flex items-center justify-center text-xs sm:text-sm group-hover:bg-yellow-400 group-hover:text-black transition-all active:scale-90 flex-shrink-0">→</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Renderiza la grilla de productos SIN parpadeo: en vez de tirar todo el
+// HTML y reconstruirlo entero (lo cual hacía que TODAS las cards
+// desaparecieran y reaparecieran ante cualquier cambio -aunque fuera de un
+// solo producto de un solo emprendedor-, algo muy molesto en un sitio
+// multicliente donde varios emprendedores editan al mismo tiempo), se hace
+// un diff contra lo que ya está en el DOM:
+//   - Card que no cambió -> se deja intacta (no se toca el nodo, no hay
+//     parpadeo ni recarga de imagen).
+//   - Card que cambió (precio, foto, etc) -> se reemplaza solo esa.
+//   - Producto nuevo -> se agrega.
+//   - Producto que ya no está (se ocultó/borró/no pasa el filtro) -> se saca.
+// También se reordena si cambió el orden, moviendo nodos existentes en vez
+// de recrearlos.
 function mostrarProductos(lista) {
     const contenedor = document.getElementById('contenedor-productos');
-    contenedor.innerHTML = "";
 
     if (lista.length === 0) {
+        contenedor.dataset.vacio = '1';
         contenedor.innerHTML = `
             <div class="col-span-full flex flex-col items-center justify-center text-center py-20">
                 <span class="text-4xl mb-4">🔍</span>
@@ -441,42 +500,57 @@ function mostrarProductos(lista) {
         return;
     }
 
-    contenedor.innerHTML = lista.map(p => {
-        const tienda = p.emprendedores ? p.emprendedores.nombre_tienda : '';
-        const logoTienda = p.emprendedores ? p.emprendedores.logo_url : '';
-        const inicialTienda = tienda ? tienda.charAt(0).toUpperCase() : '?';
-        const avatarTienda = logoTienda
-            ? `<img src="${miniaturaCloudinary(logoTienda, 60)}" alt="${escapeHtml(tienda)}" class="w-4 h-4 sm:w-6 sm:h-6 rounded-full object-cover flex-shrink-0 ring-1 ring-black/5" loading="lazy" decoding="async">`
-            : `<span class="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-yellow-400 text-black text-[7px] sm:text-[10px] font-black flex items-center justify-center flex-shrink-0">${escapeHtml(inicialTienda)}</span>`;
-        const descuentoPct = calcularDescuentoPorcentaje(p.precio_anterior, p.precio);
-        return `
-            <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl lg:rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" onclick="verDetalles('${p.id}')">
-                <div class="relative aspect-[4/5] lg:aspect-[4/3] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
-                    <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 lg:p-3.5 transition duration-300" loading="lazy" decoding="async">
-                    ${esProductoNuevoVigente(p) ? `
-                    <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-yellow-400 text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Nuevo</span>` : ''}
-                </div>
-                <div class="p-2.5 sm:p-5 lg:p-3.5 flex flex-col flex-1">
-                    <div class="flex items-center gap-1.5 sm:gap-2 lg:gap-1.5 mb-1.5 sm:mb-2 lg:mb-1 pr-2.5 py-0.5 sm:py-1 flex-shrink-0">
-                        ${avatarTienda}
-                        <span class="text-gray-500 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest truncate flex-1">${escapeHtml(tienda)}</span>
-                    </div>
-                    <h3 class="font-black text-xs sm:text-lg lg:text-sm leading-snug group-hover:text-yellow-600 transition-colors min-h-[2.4em] sm:min-h-[2.6em] lg:min-h-[2.4em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
-                    <span class="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5 sm:mt-1">${p.categorias ? escapeHtml(p.categorias.nombre) : 'General'}</span>
-                    <div class="flex items-center justify-between mt-auto pt-2 sm:pt-4 lg:pt-2">
-                        <div class="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
-                            <span class="font-900 text-sm sm:text-xl lg:text-base">${formatoPrecio(p.precio)}</span>
-                            ${descuentoPct > 0 ? `
-                                <span class="text-[9px] sm:text-xs font-bold text-gray-400 line-through">${formatoPrecio(p.precio_anterior)}</span>
-                                <span class="text-[7px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-600 text-white">-${descuentoPct}% OFF</span>
-                            ` : ''}
-                        </div>
-                        <span class="w-7 h-7 sm:w-10 sm:h-10 lg:w-8 lg:h-8 rounded-full bg-black text-white flex items-center justify-center text-xs sm:text-sm group-hover:bg-yellow-400 group-hover:text-black transition-all active:scale-90 flex-shrink-0">→</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
+    // Si veníamos del estado "sin resultados" (o la grilla estaba vacía),
+    // no hay nada que diffear: se dibuja todo de una.
+    // Primer render real: contenedor vacío, veniamos del estado "sin
+    // resultados", o todavía está el skeleton de carga puesto a mano en el
+    // HTML (divs con cp-skeleton que no tienen data-producto-id). En
+    // cualquiera de esos casos no hay nada válido para diffear: se pisa todo.
+    const esSkeletonOEstadoInicial = Array.from(contenedor.children).some(
+        el => !el.dataset || !el.dataset.productoId
+    );
+    if (contenedor.dataset.vacio === '1' || contenedor.children.length === 0 || esSkeletonOEstadoInicial) {
+        contenedor.dataset.vacio = '0';
+        contenedor.innerHTML = lista.map(p => crearCardHtmlProducto(p)).join('');
+        return;
+    }
+
+    const existentes = new Map();
+    Array.from(contenedor.children).forEach(el => {
+        if (el.dataset && el.dataset.productoId) existentes.set(el.dataset.productoId, el);
+    });
+
+    let anchorAnterior = null;
+    lista.forEach(p => {
+        const id = String(p.id);
+        let el = existentes.get(id);
+
+        if (el) {
+            existentes.delete(id);
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = crearCardHtmlProducto(p);
+            const nuevoEl = wrapper.firstElementChild;
+            if (el.dataset.hash !== nuevoEl.dataset.hash) {
+                el.replaceWith(nuevoEl);
+                el = nuevoEl;
+            }
+        } else {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = crearCardHtmlProducto(p);
+            el = wrapper.firstElementChild;
+        }
+
+        // Ubica el nodo en su posición correcta sin recrearlo (mover un nodo
+        // ya existente no dispara ni parpadeo ni recarga de su imagen).
+        const siguienteEsperado = anchorAnterior ? anchorAnterior.nextSibling : contenedor.firstChild;
+        if (siguienteEsperado !== el) {
+            contenedor.insertBefore(el, siguienteEsperado);
+        }
+        anchorAnterior = el;
+    });
+
+    // Lo que quedó en `existentes` ya no está en la lista nueva -> se saca.
+    existentes.forEach(el => el.remove());
 }
 
 function limpiarFiltros() {
