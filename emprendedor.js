@@ -384,7 +384,19 @@ function iniciarRealtimeEmprendedor(id) {
 // crearCardHtmlProducto). La única forma de que una card se saque de
 // verdad es que la fila se BORRE (evento DELETE de Realtime, ver
 // manejarProductoEliminado).
+// GUARD ANTI-RACE: igual que en main.js, esta función se llama desde más
+// de un lugar (carga inicial y resyncs de Realtime) sin coordinarse entre
+// sí. Si dos llamadas quedan "al aire" a la vez, no hay garantía de que la
+// respuesta más nueva sea la que vuelve última: una request vieja podía
+// resolver después y pisar `productos` con datos desactualizados (por
+// ejemplo, revivir por un rato un producto que ya estaba "sin stock").
+// Con este número de secuencia, solo la respuesta de la ÚLTIMA llamada en
+// salir puede escribir en `productos`.
+let _cargarProductosDelEmprendedorSeq = 0;
+
 async function cargarProductosDelEmprendedor(emprendedorId) {
+    const miSeq = ++_cargarProductosDelEmprendedorSeq;
+
     const { data, error } = await supabase
         .from('productos')
         .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, bio, medios_pago, costo_envio)')
@@ -392,6 +404,8 @@ async function cargarProductosDelEmprendedor(emprendedorId) {
         .eq('emprendedor_id', emprendedorId)
         .order('destacado', { ascending: false })
         .order('created_at', { ascending: false });
+
+    if (miSeq !== _cargarProductosDelEmprendedorSeq) return;
 
     if (error) {
         console.error(error);
