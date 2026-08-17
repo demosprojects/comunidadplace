@@ -779,12 +779,32 @@ function normalizarProducto(p) {
 // (evento DELETE de Realtime, ver manejarProductoEliminado).
 // Sí seguimos filtrando por la tienda (emprendedores.activo): si el
 // emprendedor está inactivo, sus productos no se muestran.
+// GUARD ANTI-RACE: cargarProductos() se dispara desde varios lugares que
+// no se coordinan entre sí (carga inicial, resync pasivo del canal
+// "productos", resync pasivo del canal "emprendedores", cambio de
+// categoría...). Si dos llamadas quedan "al aire" al mismo tiempo (típico
+// justo cuando se corta/reconecta la red, ej. al reiniciar Live Server),
+// no hay garantía de que la respuesta HTTP más reciente sea la que vuelve
+// última: una request vieja puede resolver DESPUÉS de una más nueva y
+// pisar `productos` con datos desactualizados (por ejemplo, un producto
+// que ya estaba "sin stock" volvía a mostrarse como disponible hasta el
+// próximo resync). Por eso cada llamada saca un número de secuencia y solo
+// la respuesta de la ÚLTIMA llamada en salir puede escribir en `productos`.
+let _cargarProductosSeq = 0;
+
 async function cargarProductos() {
+    const miSeq = ++_cargarProductosSeq;
+
     const { data, error } = await supabase
         .from('productos')
         .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago, costo_envio, usuarios(usuario))')
         .eq('emprendedores.activo', true)
         .order('created_at', { ascending: false });
+
+    // Mientras esta consulta viajaba, se disparó otra llamada más nueva:
+    // esa es la que manda. Descartamos esta respuesta para no pisar datos
+    // más frescos con datos viejos.
+    if (miSeq !== _cargarProductosSeq) return;
 
     if (error) {
         console.error(error);
