@@ -1,5 +1,7 @@
 let productos = [];        // productos ya traídos de Supabase (con joins)
 let categoriasDB = [];
+let emprendedoresCache = {}; // id -> {id, nombre_tienda, logo_url}, se llena en cargarEmprendedoresFila()
+let productosNuevosPendientes = []; // productos que llegaron por INSERT y todavía no se incorporaron a la grilla: [{id, emprendedor_nombre}]
 let visitorId = null;
 let productoModalActual = null;
 let variantesModalActual = [];
@@ -302,6 +304,12 @@ async function cargarEmprendedoresFila() {
         .order('nombre_tienda');
     if (error) { console.error(error); return; }
 
+    // Caché id -> datos básicos del emprendedor, usada por el manejo de
+    // Realtime de productos (armar el aviso de "producto nuevo de X" sin
+    // tener que ir a buscar el nombre de la tienda a Supabase cada vez).
+    emprendedoresCache = {};
+    data.forEach(e => { emprendedoresCache[e.id] = e; });
+
     // --- Fila de logos debajo del banner (abre el perfil del emprendedor) ---
     const cont = document.getElementById('emprendedores-fila');
     if (cont) {
@@ -344,25 +352,62 @@ async function cargarEmprendedoresFila() {
 // TIEMPO REAL: escucha cambios en Supabase y refresca la vitrina sola
 // ============================================================
 function iniciarRealtime() {
-    // Nuevo producto, editado, borrado, activado/ocultado -> refresca la grilla
-    const refrescarProductos = debounce(async () => {
-        await cargarProductos();
-        aplicarFiltros();
-        // Si el producto que se acaba de ocultar/borrar estaba en el
-        // carrito de alguien que sigue navegando, lo marcamos como no
-        // disponible al toque (no se saca solo, ver sincronizarDisponibilidadCarrito).
-        sincronizarDisponibilidadCarrito();
-    }, 350);
+    // Antes: CUALQUIER cambio de CUALQUIER emprendedor (bio, whatsapp,
+    // banner, horario, redes, medios de pago... todo lo que NO se muestra
+    // en la card) hacía un refetch + re-render de TODO el catálogo para
+    // TODOS los visitantes de la home. Con varios emprendedores editando su
+    // perfil seguido, esto se disparaba todo el tiempo y era la causa real
+    // del parpadeo en la grilla (no el diffing en sí, que ya andaba bien).
+    // Ahora: solo tocamos lo que hace falta según qué cambió puntualmente.
+    //   - UPDATE con nombre_tienda/logo_url distintos -> merge local +
+    //     redibuja SOLO las cards de esa tienda (como ya hace productos).
+    //   - UPDATE de "activo" (bloqueo/reactivación) -> ahí sí hace falta
+    //     resync completo, porque cambia qué productos son visibles.
+    //   - Resto de campos (bio, whatsapp, banner, etc.) -> solo actualiza
+    //     la fila de logos / panel de filtro, sin tocar la grilla.
+    //   - Sin payload (resync pasivo por reconexión), o DELETE -> resync
+    //     completo, como red de seguridad.
+    const refrescarEmprendedores = debounce(async (payload) => {
+        if (!payload || !payload.eventType || payload.eventType === 'DELETE') {
+            await cargarEmprendedoresFila();
+            await cargarProductos();
+            aplicarFiltros();
+            sincronizarDisponibilidadCarrito();
+            return;
+        }
 
-    // Nuevo emprendedor, bloqueado/activado, o editó su perfil (nombre/logo)
-    // -> refresca la fila de logos, el panel de filtro y las cards (usan esos datos)
-    const refrescarEmprendedores = debounce(async () => {
+        const nuevo = payload.new;
+        const anterior = emprendedoresCache[nuevo.id];
+        const cambioVisibilidad = anterior && anterior.activo !== nuevo.activo;
+        const cambioNombreOLogo = !anterior || anterior.nombre_tienda !== nuevo.nombre_tienda || anterior.logo_url !== nuevo.logo_url;
+
+        // Liviano: refrescar la fila de logos y el panel de filtro no cuesta nada.
         await cargarEmprendedoresFila();
-        await cargarProductos();
-        aplicarFiltros();
-        // Si la tienda se desactivó, sus productos quedan marcados como no
-        // disponibles en el carrito de quien los tuviera cargados.
-        sincronizarDisponibilidadCarrito();
+
+        if (cambioVisibilidad) {
+            // Se bloqueó o reactivó la tienda: cambia qué productos entran
+            // en el catálogo (el select filtra por emprendedores.activo).
+            await cargarProductos();
+            aplicarFiltros();
+            sincronizarDisponibilidadCarrito();
+            return;
+        }
+
+        if (cambioNombreOLogo) {
+            // Solo repintamos las cards de ESTA tienda puntual, sin tocar
+            // el resto de la grilla ni volver a pedirle nada a Supabase.
+            productos.forEach((p, idx) => {
+                if (p.emprendedores && String(p.emprendedores.id) === String(nuevo.id)) {
+                    productos[idx] = {
+                        ...p,
+                        emprendedores: { ...p.emprendedores, nombre_tienda: nuevo.nombre_tienda, logo_url: nuevo.logo_url }
+                    };
+                    actualizarTarjetaProducto(productos[idx]);
+                }
+            });
+        }
+        // Si no cambió nombre/logo/activo (ej: editó el whatsapp o la bio),
+        // no hay nada más que hacer: la grilla ni se entera.
     }, 350);
 
     // Categoría nueva/borrada/renombrada -> refresca el panel y las cards
@@ -385,17 +430,359 @@ function iniciarRealtime() {
         actualizarPrecioYWhatsapp();
     }, 350);
 
-    suscribirTabla('productos', refrescarProductos);
+    suscribirTabla('productos', manejarCambioProducto);
     suscribirTabla('emprendedores', refrescarEmprendedores);
     suscribirTabla('categorias', refrescarCategorias);
     suscribirTabla('variantes', refrescarVariantesModal);
 }
 
+// ------------------------------------------------------------
+// TIEMPO REAL DE "productos": actualización granular
+// ------------------------------------------------------------
+// En vez de recargar todo el catálogo ante cualquier cambio (lo que hacía
+// parpadear/recomponer toda la grilla y podía sacar al usuario de donde
+// estaba leyendo), reaccionamos distinto según el tipo de evento:
+//
+//   UPDATE  -> se pisan los datos locales de ESE producto (precio, precio
+//              anterior/oferta, disponibilidad -campo "activo"-, etc.) y se
+//              vuelve a pintar SOLO esa tarjeta. No se toca el resto de la
+//              grilla ni se llama a Supabase de nuevo.
+//   INSERT  -> el producto NO se agrega solo a la grilla: queda en espera
+//              y se muestra un aviso ("Hay 1 producto nuevo de X"). El
+//              usuario decide si lo quiere ver ahora o lo ignora.
+//   DELETE  -> se saca únicamente esa tarjeta del DOM.
+//
+// `payload.new` que manda Supabase Realtime siempre trae la fila completa
+// actualizada, así que no hace falta volver a pedirle nada al servidor
+// para aplicar el cambio (ver fusionarProductoLocal). Si en algún momento
+// agregás más campos "críticos" del estilo precio/disponibilidad (por
+// ejemplo un stock numérico), no hace falta tocar nada de esto: como se
+// mergean TODOS los campos de la fila, ya quedan contemplados solos.
+function manejarCambioProducto(payload) {
+    if (!payload || !payload.eventType) {
+        // Esto pasa cuando suscribirTabla nos llama sin evento real: el
+        // canal se cayó y se reconectó, o el usuario volvió a la pestaña /
+        // recuperó conexión (ya viene throttleado desde supabase-client.js,
+        // no se dispara más de 1 vez cada 20s). No sabemos qué cambió
+        // puntualmente, así que resincronizamos el catálogo completo.
+        console.debug('[Realtime productos] resync pasivo (sin payload)');
+        resincronizarProductosDebounced();
+        return;
+    }
+
+    console.debug('[Realtime productos]', payload.eventType, payload.new || payload.old);
+
+    if (payload.eventType === 'INSERT') {
+        manejarProductoInsertado(payload.new);
+    } else if (payload.eventType === 'UPDATE') {
+        manejarProductoActualizado(payload.new);
+    } else if (payload.eventType === 'DELETE') {
+        manejarProductoEliminado(payload.old);
+    }
+}
+
+// Red de seguridad: recarga el catálogo entero. Se usa solo cuando no
+// tenemos el detalle del cambio (ver manejarCambioProducto de arriba).
+// OJO: esto NO toca `productosNuevosPendientes`. cargarProductos() trae
+// todos los productos activos (los pendientes incluidos, porque están
+// activos en la base, solo que el usuario todavía no aceptó verlos), y
+// aplicarFiltros() ya se encarga de excluir de la grilla lo que siga
+// pendiente. Si acá se vaciara la lista de pendientes, un resync de fondo
+// (por ej. al volver de otra pestaña) haría desaparecer el aviso sin que
+// el usuario lo haya visto ni decidido nada.
+async function resincronizarProductosCompleto() {
+    await cargarProductos();
+    aplicarFiltros();
+    sincronizarDisponibilidadCarrito();
+}
+const resincronizarProductosDebounced = debounce(resincronizarProductosCompleto, 350);
+
+// Pisa en `productos[idx]` los campos de la fila nueva que llegó por
+// Realtime, conservando los datos "de join" (nombre de categoría, datos del
+// emprendedor) que esa fila no trae. Si cambió el id de categoría o de
+// emprendedor (rarísimo, pero por las dudas), busca el nombre actualizado
+// en lo que ya tenemos cargado en memoria (categoriasDB / emprendedoresCache)
+// en vez de ir a pedirlo a Supabase.
+function fusionarProductoLocal(idx, nuevo) {
+    normalizarProducto(nuevo);
+    const actual = productos[idx];
+
+    let categorias = actual.categorias;
+    if (String(nuevo.categoria_id) !== String(actual.categoria_id)) {
+        const cat = categoriasDB.find(c => String(c.id) === String(nuevo.categoria_id));
+        categorias = cat ? { id: cat.id, nombre: cat.nombre } : null;
+    }
+
+    let emprendedores = actual.emprendedores;
+    if (String(nuevo.emprendedor_id) !== String(actual.emprendedor_id)) {
+        const emp = emprendedoresCache[nuevo.emprendedor_id];
+        if (emp) emprendedores = { ...actual.emprendedores, id: emp.id, nombre_tienda: emp.nombre_tienda, logo_url: emp.logo_url };
+    }
+
+    productos[idx] = { ...actual, ...nuevo, categorias, emprendedores };
+}
+
+// Vuelve a pintar SOLO la tarjeta de este producto (si está visible con los
+// filtros actuales), sin tocar ninguna otra card ni la posición de scroll.
+// OJO: acá se reemplaza SIEMPRE que la card exista en pantalla, sin
+// comparar hash. La comparación de hash es útil en mostrarProductos()
+// (donde hay que decidir, para TODA la grilla, qué cards tocar y cuáles
+// dejar intactas), pero acá ya sabemos con certeza que este producto
+// puntual cambió (nos llamaron desde manejarProductoActualizado con el
+// payload real de Supabase) — comparar hash de nuevo sólo puede hacer que
+// una actualización legítima se pierda en silencio si, por lo que sea
+// (ej: Supabase devuelve "precio" como string por REST y como number por
+// Realtime), el hash no varía aunque el dato sí.
+function actualizarTarjetaProducto(p) {
+    const card = document.querySelector(`[data-producto-id="${p.id}"]`);
+    if (!card) return; // no está en pantalla ahora mismo (no pasa el filtro/búsqueda activos): no hay nada que redibujar
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = crearCardHtmlProducto(p);
+    const nuevoEl = wrapper.firstElementChild;
+    card.replaceWith(nuevoEl);
+}
+
+async function manejarProductoActualizado(nuevo) {
+    // Comparación por String(): si el id de producto fuera numérico
+    // (bigint) en vez de uuid, un "===" estricto entre number y string
+    // podía fallar y hacer que una simple actualización de precio se
+    // tratara como si el producto no existiera localmente.
+    const idx = productos.findIndex(p => String(p.id) === String(nuevo.id));
+
+    // OJO: acá NO tratamos `activo === false` como si el producto se
+    // hubiera borrado. `activo` es el campo que el emprendedor usa para
+    // marcar "sin stock" (lo pausa) y también "disponible de nuevo" (lo
+    // reactiva); en ambos casos la card tiene que PERMANECER en la
+    // grilla, solo cambia su estado visual (ver crearCardHtmlProducto,
+    // que ya pinta el badge "Sin stock" según p.activo). Sacar la card
+    // del todo queda reservado únicamente para el evento DELETE real
+    // (ver manejarProductoEliminado), que es cuando el producto se borró
+    // en serio de la base.
+    if (idx === -1) {
+        // No lo teníamos localmente (por ej: estaba pausado y se reactivó,
+        // o pertenece a una tienda que recién se activó): se comporta igual
+        // que si fuera un producto nuevo -> aviso, no se inserta solo.
+        await manejarProductoInsertado(nuevo);
+        return;
+    }
+
+    fusionarProductoLocal(idx, nuevo);
+    actualizarTarjetaProducto(productos[idx]);
+    // No se recarga la grilla ni se mueve al usuario: sincronizamos el
+    // carrito en silencio por si esto afecta algún ítem que tenga cargado
+    // (ver nota sobre precios en sincronizarDisponibilidadCarrito).
+    sincronizarDisponibilidadCarrito(false);
+}
+
+function manejarProductoEliminado(viejo) {
+    const id = viejo && viejo.id;
+    if (!id) return;
+
+    const habiaEnLocal = productos.some(p => String(p.id) === String(id));
+    productos = productos.filter(p => String(p.id) !== String(id));
+
+    const estabaPendiente = productosNuevosPendientes.some(p => String(p.id) === String(id));
+    if (estabaPendiente) {
+        productosNuevosPendientes = productosNuevosPendientes.filter(p => String(p.id) !== String(id));
+        mostrarAvisoProductosNuevos();
+    }
+
+    if (!habiaEnLocal) return;
+
+    const card = document.querySelector(`[data-producto-id="${id}"]`);
+    if (card) card.remove();
+
+    // Si esa era la última card visible, mostramos el estado "sin resultados".
+    const contenedor = document.getElementById('contenedor-productos');
+    if (contenedor && contenedor.children.length === 0) aplicarFiltros();
+
+    sincronizarDisponibilidadCarrito(false);
+
+    if (productoModalActual && String(productoModalActual.id) === String(id)) {
+        cerrarModal();
+        mostrarToast('Este producto ya no está disponible.', 'error');
+    }
+}
+
+// Producto nuevo: NO se agrega a la grilla. Se guarda en la lista de
+// pendientes y se arma/actualiza el aviso para que el usuario decida.
+async function manejarProductoInsertado(nuevo) {
+    if (nuevo.activo === false) return; // cargado pero todavía no publicado
+    if (productos.some(p => String(p.id) === String(nuevo.id))) return; // ya lo tenemos (evento duplicado)
+    if (productosNuevosPendientes.some(p => String(p.id) === String(nuevo.id))) return;
+
+    const emprendedor = emprendedoresCache[nuevo.emprendedor_id];
+    // Tienda inactiva, o todavía no la cargamos en caché (recién creada):
+    // no molestamos con el aviso. Si en verdad corresponde mostrarlo,
+    // la próxima resincronización completa (reconexión / volver a la
+    // pestaña) lo va a traer igual.
+    if (!emprendedor) {
+        console.debug('[Realtime productos] INSERT ignorado: no hay caché para emprendedor_id', nuevo.emprendedor_id);
+        return;
+    }
+
+    productosNuevosPendientes.push({ id: nuevo.id, emprendedor_nombre: emprendedor.nombre_tienda });
+    mostrarAvisoProductosNuevos();
+}
+
+// ------------------------------------------------------------
+// AVISO "PRODUCTOS NUEVOS" (agrupa varios inserts mientras el usuario navega)
+// ------------------------------------------------------------
+function posicionarAvisoProductosNuevos() {
+    const el = document.getElementById('aviso-productos-nuevos');
+    const header = document.getElementById('site-header');
+    if (!el || !header) return;
+    el.style.top = (header.offsetHeight + 10) + 'px';
+}
+window.addEventListener('resize', posicionarAvisoProductosNuevos);
+
+function mostrarAvisoProductosNuevos() {
+    const el = document.getElementById('aviso-productos-nuevos');
+    if (!el) return;
+
+    if (productosNuevosPendientes.length === 0) {
+        el.classList.add('hidden');
+        return;
+    }
+
+    posicionarAvisoProductosNuevos();
+
+    const cantidad = productosNuevosPendientes.length;
+    const porEmprendedor = new Map();
+    productosNuevosPendientes.forEach(p => {
+        porEmprendedor.set(p.emprendedor_nombre, (porEmprendedor.get(p.emprendedor_nombre) || 0) + 1);
+    });
+
+    let textoTitulo, extra = '';
+    if (cantidad === 1) {
+        textoTitulo = `Hay 1 producto nuevo de <span class="text-yellow-700">${escapeHtml(productosNuevosPendientes[0].emprendedor_nombre)}</span>`;
+    } else if (porEmprendedor.size === 1) {
+        // Varios productos, pero todos de la misma tienda: no hace falta desglosar.
+        const [nombre] = porEmprendedor.keys();
+        textoTitulo = `Hay ${cantidad} productos nuevos de <span class="text-yellow-700">${escapeHtml(nombre)}</span>`;
+    } else {
+        textoTitulo = `Hay ${cantidad} productos nuevos`;
+        extra = `<ul class="text-xs text-gray-500 font-semibold mt-1 space-y-0.5">` +
+            Array.from(porEmprendedor.entries()).map(([nombre, n]) =>
+                `<li>• ${n} de ${escapeHtml(nombre)}</li>`).join('') +
+            `</ul>`;
+    }
+
+    // Si solo hay UN producto nuevo, la acción principal lleva directo a
+    // ese producto ("Ver producto"); si hay varios, incorpora todos los
+    // pendientes a la grilla de una ("Ver novedades") sin forzar un
+    // refresh completo de la página.
+    const accionPrincipal = cantidad === 1
+        ? `<button onclick="verProductoNuevoDesdeAviso('${productosNuevosPendientes[0].id}')" class="bg-black text-white px-4 py-2 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 whitespace-nowrap">Ver producto</button>`
+        : `<button onclick="verNovedadesProductos()" class="bg-black text-white px-4 py-2 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 whitespace-nowrap">Ver novedades</button>`;
+
+    el.innerHTML = `
+        <div class="flex items-start gap-2.5 min-w-0">
+            <span class="text-base leading-none mt-0.5 flex-shrink-0">✨</span>
+            <div class="min-w-0">
+                <p class="text-sm font-bold leading-snug">${textoTitulo}</p>
+                ${extra}
+            </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+            ${accionPrincipal}
+            <button onclick="cerrarAvisoProductosNuevos()" aria-label="Cerrar aviso" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-black hover:bg-yellow-100 transition-colors flex-shrink-0">✕</button>
+        </div>`;
+
+    el.classList.remove('hidden');
+}
+
+// El usuario cierra el aviso sin interesarle: se descarta la lista de
+// pendientes y sigue navegando normal. Esos productos van a aparecer solos
+// la próxima vez que se resincronice el catálogo completo (recarga de
+// página, reconexión, etc.), no hace falta "recordarlos" acá.
+function cerrarAvisoProductosNuevos() {
+    productosNuevosPendientes = [];
+    mostrarAvisoProductosNuevos();
+}
+
+// Trae de Supabase (con sus joins) los productos pendientes que el usuario
+// quiere ver, los agrega a `productos` y repinta la grilla con el diff de
+// siempre (mostrarProductos ya se encarga de no tocar las cards que no
+// cambiaron).
+async function incorporarProductosNuevosPendientes(ids) {
+    if (!ids || ids.length === 0) return;
+
+    const { data, error } = await supabase
+        .from('productos')
+        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago, costo_envio, usuarios(usuario))')
+        .in('id', ids)
+        .eq('activo', true)
+        .eq('emprendedores.activo', true);
+
+    if (error) {
+        console.error('Error incorporando productos nuevos:', error);
+        mostrarToast('No se pudieron cargar los productos nuevos.', 'error');
+        return;
+    }
+
+    data.forEach(p => {
+        normalizarProducto(p);
+        if (!productos.some(existente => String(existente.id) === String(p.id))) productos.push(p);
+    });
+    precargarImagenesProductos();
+    aplicarFiltros();
+}
+
+function quitarDePendientesNuevos(ids) {
+    const idsASacar = new Set(ids.map(String));
+    productosNuevosPendientes = productosNuevosPendientes.filter(p => !idsASacar.has(String(p.id)));
+    mostrarAvisoProductosNuevos();
+}
+
+// Acción "Ver producto" (un solo producto nuevo): lo incorpora a la grilla
+// y abre directo su modal de detalle.
+async function verProductoNuevoDesdeAviso(id) {
+    await incorporarProductosNuevosPendientes([id]);
+    quitarDePendientesNuevos([id]);
+    await verDetalles(id);
+}
+
+// Acción "Ver novedades" (varios productos nuevos): incorpora todos los
+// pendientes a la grilla de una y lleva al usuario arriba de la vitrina,
+// sin recargar la página.
+async function verNovedadesProductos() {
+    const ids = productosNuevosPendientes.map(p => p.id);
+    await incorporarProductosNuevosPendientes(ids);
+    quitarDePendientesNuevos(ids);
+    const destino = document.getElementById('contenedor-productos');
+    if (destino) destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Normaliza los campos numéricos de un producto apenas llega, sea por REST
+// (Supabase devuelve las columnas numeric/decimal como STRING, ej "1500.00",
+// para no perder precisión) o por Realtime (llega como number nativo). Si no
+// se normaliza acá, dos productos con el mismo precio real podían terminar
+// con hashes distintos ("pr":"1500.00" vs "pr":1500) sólo por el tipo de
+// dato, lo que rompía el diff: cards que en verdad no cambiaron se
+// redibujaban igual (parpadeo en resyncs), o el sistema de comparación se
+// volvía impredecible.
+function normalizarProducto(p) {
+    if (!p) return p;
+    p.precio = p.precio === null || p.precio === undefined ? p.precio : Number(p.precio);
+    p.precio_anterior = p.precio_anterior === null || p.precio_anterior === undefined ? p.precio_anterior : Number(p.precio_anterior);
+    return p;
+}
+
+// OJO: NO filtramos por productos.activo acá. `activo` es el campo que el
+// emprendedor usa tanto para "publicado" como para "sin stock" (lo pausa
+// cuando se queda sin stock, lo reactiva cuando repone). Si lo filtráramos
+// acá, un producto sin stock desaparecería del todo de la grilla en vez de
+// quedar visible marcado "Sin stock" (ver crearCardHtmlProducto). La única
+// forma de que una card se saque de verdad es que la fila se BORRE
+// (evento DELETE de Realtime, ver manejarProductoEliminado).
+// Sí seguimos filtrando por la tienda (emprendedores.activo): si el
+// emprendedor está inactivo, sus productos no se muestran.
 async function cargarProductos() {
     const { data, error } = await supabase
         .from('productos')
         .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago, costo_envio, usuarios(usuario))')
-        .eq('activo', true)
         .eq('emprendedores.activo', true)
         .order('created_at', { ascending: false });
 
@@ -405,7 +792,7 @@ async function cargarProductos() {
             `<p class="col-span-full text-center py-10 text-red-400 italic">No se pudieron cargar los productos. Revisá la conexión con Supabase.</p>`;
         return;
     }
-    productos = data;
+    productos = data.map(normalizarProducto);
     precargarImagenesProductos();
 }
 
@@ -432,23 +819,29 @@ function crearCardHtmlProducto(p) {
         ? `<img src="${miniaturaCloudinary(logoTienda, 60)}" alt="${escapeHtml(tienda)}" class="w-4 h-4 sm:w-6 sm:h-6 rounded-full object-cover flex-shrink-0 ring-1 ring-black/5" loading="lazy" decoding="async">`
         : `<span class="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-yellow-400 text-black text-[7px] sm:text-[10px] font-black flex items-center justify-center flex-shrink-0">${escapeHtml(inicialTienda)}</span>`;
     const descuentoPct = calcularDescuentoPorcentaje(p.precio_anterior, p.precio);
+    // `activo === false` = el emprendedor lo pausó por falta de stock. La
+    // card sigue en la grilla, solo se marca "Sin stock" y no se puede
+    // comprar (ver agregarAlCarrito).
+    const sinStock = p.activo === false;
     // data-hash guarda una foto de los datos que afectan el render de esta
     // card: sirve para que mostrarProductos() sepa si tiene que redibujarla
     // o puede dejarla tal cual (evita el parpadeo al llegar cambios por
     // tiempo real de OTROS productos/otros emprendedores).
     const hash = escapeHtml(JSON.stringify({
-        n: p.nombre, pr: p.precio, pa: p.precio_anterior, img: p.imagen_url,
+        n: p.nombre, pr: Number(p.precio), pa: p.precio_anterior != null ? Number(p.precio_anterior) : p.precio_anterior, img: p.imagen_url,
         cat: p.categorias ? p.categorias.nombre : null,
-        t: tienda, l: logoTienda, nv: esProductoNuevoVigente(p)
+        t: tienda, l: logoTienda, nv: esProductoNuevoVigente(p), act: p.activo === false ? false : true
     }));
     return `
         <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl lg:rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" data-producto-id="${p.id}" data-hash="${hash}" onclick="verDetalles('${p.id}')">
             <div class="relative aspect-[4/5] lg:aspect-[4/3] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
-                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 lg:p-3.5 transition duration-300" loading="lazy" decoding="async">
-                ${esProductoNuevoVigente(p) ? `
-                <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-yellow-400 text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Nuevo</span>` : ''}
+                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 lg:p-3.5 transition duration-300 ${sinStock ? 'grayscale opacity-50' : ''}" loading="lazy" decoding="async">
+                ${sinStock ? `
+                <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-gray-800 text-white text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Sin stock</span>`
+                : (esProductoNuevoVigente(p) ? `
+                <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-yellow-400 text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Nuevo</span>` : '')}
             </div>
-            <div class="p-2.5 sm:p-5 lg:p-3.5 flex flex-col flex-1">
+            <div class="p-2.5 sm:p-5 lg:p-3.5 flex flex-col flex-1 ${sinStock ? 'opacity-60' : ''}">
                 <div class="flex items-center gap-1.5 sm:gap-2 lg:gap-1.5 mb-1.5 sm:mb-2 lg:mb-1 pr-2.5 py-0.5 sm:py-1 flex-shrink-0">
                     ${avatarTienda}
                     <span class="text-gray-500 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest truncate flex-1">${escapeHtml(tienda)}</span>
@@ -613,7 +1006,16 @@ function escapeHtml(str) {
 function aplicarFiltros() {
     const textoBusqueda = document.getElementById('buscador').value.toLowerCase();
 
-    let filtrados = productos;
+    // Los productos "nuevos" que llegaron por Realtime y todavía están
+    // esperando que el usuario decida (ver aviso) NUNCA se muestran en la
+    // grilla, sin importar si vienen de `productos` por una resincronización
+    // completa (cargarProductos trae TODO lo activo, pendientes incluidos).
+    // Filtrarlos acá -en vez de sacarlos a mano de `productos`- evita que
+    // un resync de fondo los "cuele" en la grilla sin que el usuario haya
+    // tocado "Ver producto"/"Ver novedades".
+    const idsPendientes = new Set(productosNuevosPendientes.map(p => String(p.id)));
+
+    let filtrados = productos.filter(p => !idsPendientes.has(String(p.id)));
 
     if (categoriaActivaId !== 'Todos') {
         filtrados = filtrados.filter(p => String(p.categoria_id) === String(categoriaActivaId));
@@ -627,7 +1029,6 @@ function aplicarFiltros() {
             (p.emprendedores && p.emprendedores.nombre_tienda.toLowerCase().includes(textoBusqueda))
         );
     }
-    filtrados = [...filtrados]; // no mutar el array original de productos
     if (ordenActivo === 'precio-asc') {
         filtrados.sort((a, b) => Number(a.precio) - Number(b.precio));
     } else if (ordenActivo === 'precio-desc') {
@@ -789,7 +1190,16 @@ async function verDetalles(id) {
     const modalCategoria = document.getElementById('modal-categoria');
     if (modalCategoria) modalCategoria.innerText = p.categorias ? p.categorias.nombre : 'General';
     const modalBadgeNuevo = document.getElementById('modal-badge-nuevo');
-    if (modalBadgeNuevo) modalBadgeNuevo.classList.toggle('hidden', !esProductoNuevoVigente(p));
+    const sinStock = p.activo === false;
+    if (modalBadgeNuevo) modalBadgeNuevo.classList.toggle('hidden', sinStock || !esProductoNuevoVigente(p));
+    const modalBadgeSinStock = document.getElementById('modal-badge-sin-stock');
+    if (modalBadgeSinStock) modalBadgeSinStock.classList.toggle('hidden', !sinStock);
+    const modalBtnAgregar = document.getElementById('modal-btn-agregar');
+    const modalBtnAgregarTexto = document.getElementById('modal-btn-agregar-texto');
+    if (modalBtnAgregar) {
+        modalBtnAgregar.disabled = sinStock;
+        if (modalBtnAgregarTexto) modalBtnAgregarTexto.textContent = sinStock ? 'Sin stock' : 'Agregar al carrito';
+    }
 
     renderMediosPagoModal(p);
 
@@ -1471,15 +1881,45 @@ function guardarCarritoEnStorage() {
 // realtime y al iniciar), así que compararlo contra el carrito guardado
 // es suficiente para detectar productos que se volvieron no disponibles
 // mientras estaban en el carrito de alguien.
+// Recorre el carrito y, para los items cuyo precio depende del precio base
+// del producto (no de una variante con precio propio), lo actualiza al
+// precio actual. Devuelve true si tocó algo (para que el caller sepa si
+// tiene que re-renderizar/guardar).
+function sincronizarPreciosCarrito() {
+    let huboCambios = false;
+    carrito.items.forEach(item => {
+        // OJO: usaPrecioBase !== false (en vez de "!item.usaPrecioBase") a
+        // propósito. Carritos guardados en localStorage ANTES de que este
+        // campo existiera no lo tienen (queda undefined); si tratáramos eso
+        // como "false" esos items quedaban congelados para siempre en su
+        // precio viejo. Tratar "undefined" como "sí, sincronizalo" es el
+        // default seguro: la mayoría de los items son de precio base.
+        if (item.noDisponible || item.usaPrecioBase === false) return;
+        const p = productos.find(pr => String(pr.id) === String(item.productoId));
+        if (!p) return;
+        const precioActual = Number(p.precio);
+        if (!isNaN(precioActual) && precioActual !== item.precioUnitario) {
+            item.precioUnitario = precioActual;
+            huboCambios = true;
+        }
+    });
+    return huboCambios;
+}
+
 function sincronizarDisponibilidadCarrito(mostrarAviso = true) {
     if (carrito.items.length === 0) return [];
 
-    const idsActivos = new Set(productos.map(p => p.id));
+    // OJO: ya no alcanza con "está en `productos`", porque ahora los
+    // productos sin stock (activo === false) también se cargan y se
+    // quedan en memoria (para poder mostrar su card marcada "Sin
+    // stock"). Un producto solo está realmente disponible para comprar
+    // si además tiene activo === true.
+    const idsActivos = new Set(productos.filter(p => p.activo !== false).map(p => String(p.id)));
     const nuevosNoDisponibles = [];
     let huboCambios = false;
 
     carrito.items.forEach(item => {
-        const disponibleAhora = idsActivos.has(item.productoId);
+        const disponibleAhora = idsActivos.has(String(item.productoId));
         if (!disponibleAhora && !item.noDisponible) {
             item.noDisponible = true;
             nuevosNoDisponibles.push(item);
@@ -1490,6 +1930,15 @@ function sincronizarDisponibilidadCarrito(mostrarAviso = true) {
             huboCambios = true;
         }
     });
+
+    // El precio del carrito quedaba "congelado" al valor que tenía cuando
+    // se agregó: si el emprendedor editaba el precio del producto después,
+    // quien ya lo tenía en el carrito seguía viendo el precio viejo. Acá
+    // lo recalculamos para los items cuyo precio depende del precio BASE
+    // del producto (item.usaPrecioBase); los que quedaron con un precio
+    // fijo por variante (ej: "Con caja" -> $60.000) no se tocan, porque
+    // ese precio no depende de `producto.precio` (ver calcularPrecioFinalProducto).
+    if (sincronizarPreciosCarrito()) huboCambios = true;
 
     if (huboCambios) {
         guardarCarritoEnStorage();
@@ -1514,10 +1963,21 @@ function modificarCantidadModal(delta) {
 function agregarAlCarrito() {
     const p = productoModalActual;
     if (!p || !p.emprendedores) return;
+    if (p.activo === false) {
+        mostrarToast('Este producto está sin stock por el momento.', 'error');
+        return;
+    }
 
     const precioUnitario = calcularPrecioFinalProducto(p.precio, seleccionVariantes);
     const variantesTexto = Object.entries(seleccionVariantes).map(([grupo, v]) => `${grupo}: ${v.valor}`).join(', ');
     const itemKey = `${p.id}__${variantesTexto}`;
+
+    // usaPrecioBase: si NINGUNA variante seleccionada tiene precio propio,
+    // el precio del item es directamente el precio del producto -> hay que
+    // mantenerlo sincronizado si el emprendedor lo edita después (ver
+    // sincronizarPreciosCarrito). Si alguna variante sí tiene precio propio,
+    // ese precio queda fijo (no depende de producto.precio).
+    const usaPrecioBase = Object.values(seleccionVariantes).every(v => !(Number(v.precio_adicional) > 0));
 
     const nuevoItem = {
         key: itemKey,
@@ -1525,6 +1985,7 @@ function agregarAlCarrito() {
         nombre: p.nombre,
         imagen: p.imagen_url || '',
         precioUnitario,
+        usaPrecioBase,
         cantidad: cantidadModalActual,
         variantesTexto,
         noDisponible: false
@@ -1777,14 +2238,45 @@ function renderCarrito() {
 }
 
 function abrirCarrito() {
-    // Red de seguridad extra: si por lo que sea el realtime no llegó a
-    // tiempo, al menos acá, justo antes de mostrar el carrito, lo
-    // volvemos a validar contra el catálogo activo.
+    // Mostramos el carrito al instante con lo que ya tenemos en memoria
+    // (no hacemos esperar al usuario a que responda la red).
     sincronizarDisponibilidadCarrito();
     renderCarrito();
     document.getElementById('carrito-overlay').classList.remove('hidden');
     document.getElementById('carrito-drawer').classList.remove('translate-x-full');
     bloquearScrollBody();
+
+    // Red de seguridad real: en vez de confiar en que el evento de Realtime
+    // ya llegó y actualizó `productos` en memoria (puede no haber llegado
+    // todavía, o el canal puede haberse cortado sin que nos diéramos
+    // cuenta), le preguntamos directo a Supabase el precio/disponibilidad
+    // ACTUAL de los productos que el usuario tiene en el carrito. Si algo
+    // cambió, se corrige acá aunque el realtime nunca hubiera avisado.
+    refrescarPreciosCarritoDesdeServidor();
+}
+
+async function refrescarPreciosCarritoDesdeServidor() {
+    if (carrito.items.length === 0) return;
+
+    const ids = [...new Set(carrito.items.map(i => i.productoId))];
+    const { data, error } = await supabase
+        .from('productos')
+        .select('id, precio, activo')
+        .in('id', ids);
+
+    if (error || !data) return;
+
+    data.forEach(row => {
+        const idx = productos.findIndex(p => String(p.id) === String(row.id));
+        if (idx !== -1) {
+            productos[idx].precio = Number(row.precio);
+            productos[idx].activo = row.activo;
+        } else {
+            productos.push({ id: row.id, precio: Number(row.precio), activo: row.activo });
+        }
+    });
+
+    sincronizarDisponibilidadCarrito();
 }
 
 function cerrarCarrito() {
