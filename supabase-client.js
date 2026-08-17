@@ -224,36 +224,54 @@ function suscribirTabla(tabla, callback, filtro) {
     if (filtro) config.filter = filtro;
     const nombreCanal = `rt-${tabla}-${filtro || 'all'}-${Math.random().toString(36).slice(2, 8)}`;
 
+    // "Red de seguridad": si el canal se cae o el usuario vuelve a la
+    // pestaña / recupera conexión, forzamos una resincronización por si en
+    // el medio se perdió algún evento. PERO esto no puede dispararse cada
+    // vez que el usuario cambia de pestaña un segundo y vuelve (pasa todo
+    // el tiempo en el celular): antes eso pisaba avisos/estado que el
+    // usuario todavía no había visto y hacía "temblar" la grilla sin
+    // necesidad. Por eso lo limitamos a como mucho 1 vez cada 20s, y solo
+    // si de verdad pasó ese tiempo desde el último dato fresco (evento real
+    // recibido o resync anterior).
+    const MIN_MS_ENTRE_RESYNC_PASIVO = 20000;
+    let ultimoDatoFresco = Date.now();
+
+    function resyncPasivo(motivo) {
+        if (Date.now() - ultimoDatoFresco < MIN_MS_ENTRE_RESYNC_PASIVO) return;
+        ultimoDatoFresco = Date.now();
+        console.debug(`Realtime "${tabla}": resync pasivo (${motivo})`);
+        try { callback(); } catch (e) { /* noop */ }
+    }
+
     const canal = supabase
         .channel(nombreCanal)
-        .on('postgres_changes', config, callback)
+        .on('postgres_changes', config, (payload) => {
+            ultimoDatoFresco = Date.now();
+            callback(payload);
+        })
         .subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') ultimoDatoFresco = Date.now();
             // Si el canal se cae (wifi que titila, el celular cambia de red,
             // la notebook se suspendió, etc.) por defecto nos quedaríamos
             // escuchando un canal muerto en silencio hasta que alguien
             // recargue la página a mano. Acá lo detectamos y reintentamos.
             if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
                 console.warn(`Realtime "${tabla}": canal caído (${status}), reintentando...`, err || '');
-                // Por si en el lapso que estuvo caído se perdió algún cambio,
-                // pedimos los datos de una al toque (además de reconectar).
-                try { callback(); } catch (e) { /* noop */ }
+                resyncPasivo('canal caído');
                 setTimeout(() => {
                     if (document.visibilityState === 'visible') canal.subscribe();
                 }, 2000);
             }
         });
 
-    // Red de seguridad extra: al volver a la pestaña o recuperar conexión,
-    // refrescamos igual aunque el canal realtime no haya avisado nada raro
-    // (cubre el caso de que se haya perdido algún evento sin que el cliente
-    // se diera cuenta de que el socket estaba colgado).
     document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') callback();
+        if (document.visibilityState === 'visible') resyncPasivo('volvió a la pestaña');
     });
-    window.addEventListener('online', () => callback());
+    window.addEventListener('online', () => resyncPasivo('recuperó conexión'));
 
     return canal;
 }
+
 
 // ------------------------------------------------------------
 // PRODUCTO "NUEVO": se marca a mano al cargar/editar el producto
