@@ -451,6 +451,12 @@
             </div>
         </div>
 
+        <!-- Aviso de productos nuevos detectados por Realtime: se arma y
+             muestra desde JS (mostrarAvisoProductosNuevos en main.js). Queda
+             fijo debajo del header para que se vea sin importar en qué parte
+             de la grilla esté navegando el usuario. -->
+        <div id="aviso-productos-nuevos" class="hidden fixed left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-lg flex items-start sm:items-center gap-2.5 sm:gap-4 justify-between bg-yellow-50 border-2 border-yellow-400 rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 shadow-xl animate-fade-in"></div>
+
         <div id="contenedor-productos" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-5">
             <div class="rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
                 <div class="cp-skeleton aspect-[4/5]"></div>
@@ -571,6 +577,7 @@
                 <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5">
                     <span id="modal-categoria" class="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest"></span>
                     <span id="modal-badge-nuevo" class="hidden text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-yellow-400 text-black">Nuevo</span>
+                    <span id="modal-badge-sin-stock" class="hidden text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-gray-800 text-white">Sin stock</span>
                 </div>
                 <button type="button" id="modal-ver-perfil" class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
                     <span>Ver perfil de <span id="modal-ver-perfil-nombre"></span></span>
@@ -604,8 +611,8 @@
                             <span id="modal-cantidad" class="font-black w-5 text-center text-sm">1</span>
                             <button onclick="modificarCantidadModal(1)" class="w-8 h-8 rounded-full bg-white shadow font-black text-lg leading-none hover:bg-yellow-400 transition-all active:scale-90">+</button>
                         </div>
-                        <button onclick="agregarAlCarrito()" class="flex-1 inline-flex items-center justify-center gap-2 bg-black text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-xs sm:text-sm hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
-                            Agregar al carrito
+                        <button id="modal-btn-agregar" onclick="agregarAlCarrito()" class="flex-1 inline-flex items-center justify-center gap-2 bg-black text-white py-3.5 rounded-2xl font-black uppercase tracking-widest text-xs sm:text-sm hover:bg-yellow-400 hover:text-black transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-black disabled:hover:text-white">
+                            <span id="modal-btn-agregar-texto">Agregar al carrito</span>
                         </button>
                     </div>
                     <a id="modal-whatsapp" href="#" target="_blank" class="mt-2 inline-flex items-center justify-center gap-1.5 w-full text-center text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors">
