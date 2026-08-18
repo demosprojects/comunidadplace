@@ -16,6 +16,31 @@
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        /* Aviso de "producto nuevo": vive fijo abajo, centrado, y entra/sale
+           deslizándose desde el borde inferior sin tapar el resto de la
+           pantalla. Arranca desplazado hacia abajo y transparente; la clase
+           .aviso-visible (agregada/quitada por JS) lo sube y lo muestra. */
+        #aviso-productos-nuevos {
+            /* El div también trae la clase Tailwind "relative" (para que el
+               botón de cerrar, que es "absolute", se posicione respecto a
+               este contenedor). Como el CDN de Tailwind genera .relative
+               DESPUÉS de .fixed en su hoja de estilos, sin este "position:
+               fixed" explícito (con especificidad de ID, que le gana a
+               cualquier clase) la clase .relative terminaba ganando y el
+               aviso quedaba metido en el flujo normal del documento en vez
+               de fijo sobre la pantalla. */
+            position: fixed;
+            /* "top" lo pone JS (posicionarAvisoProductosNuevos), a la altura
+               justo debajo del header; acá solo se anima el slide, que
+               arranca oculto por encima de su posición final. */
+            transform: translate(-50%, calc(-100% - 1.5rem));
+            opacity: 0;
+            transition: transform 0.5s cubic-bezier(.16,1,.3,1), opacity 0.4s ease;
+        }
+        #aviso-productos-nuevos.aviso-visible {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
         @keyframes splashPulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.08); }
@@ -513,9 +538,10 @@
 
         <!-- Aviso de productos nuevos detectados por Realtime: se arma y
              muestra desde JS (mostrarAvisoProductosNuevos en emprendedor.js).
-             Queda fijo debajo del header para que se vea sin importar en qué
-             parte de la grilla esté navegando el usuario. -->
-        <div id="aviso-productos-nuevos" class="hidden fixed left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-lg flex items-start sm:items-center gap-2.5 sm:gap-4 justify-between bg-yellow-50 border-2 border-yellow-400 rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 shadow-xl animate-fade-in"></div>
+             Queda fijo debajo del header, centrado, y baja deslizándose sin
+             importar en qué parte de la grilla esté navegando el usuario
+             (ver "position: fixed" explícito en el <style> de arriba). -->
+        <div id="aviso-productos-nuevos" class="hidden fixed left-1/2 z-40 w-[calc(100%-2rem)] max-w-md sm:max-w-lg bg-white border border-gray-100 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden relative"></div>
 
         <div id="contenedor-productos" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-5"></div>
     </main>
