@@ -573,6 +573,42 @@ async function manejarProductoActualizado(nuevo) {
     // carrito en silencio por si esto afecta algún ítem que tenga cargado
     // (ver nota sobre precios en sincronizarDisponibilidadCarrito).
     sincronizarDisponibilidadCarrito(false);
+    // Si el visitante tiene abierto el modal de ESTE producto justo cuando
+    // el emprendedor lo edita (precio, sin stock, etc.), lo reflejamos ahí
+    // también, en vez de que quede desactualizado hasta que lo vuelva a abrir.
+    actualizarModalSiCorresponde(productos[idx]);
+}
+
+// Refresca el modal de detalle (imagen grayscale, badges, precio, botón de
+// agregar) cuando el producto que se está viendo cambió por Realtime.
+// `productoModalActual` seguía apuntando al objeto VIEJO (fusionarProductoLocal
+// crea un objeto nuevo en `productos[idx]`), así que hay que reasignarlo antes
+// de repintar, o el modal seguiría mostrando datos desactualizados.
+function actualizarModalSiCorresponde(p) {
+    if (!productoModalActual || String(productoModalActual.id) !== String(p.id)) return;
+    const modal = document.getElementById('modal-producto');
+    if (!modal || !modal.classList.contains('abierto')) return;
+
+    productoModalActual = p;
+
+    const modalImg = document.getElementById('modal-img');
+    const sinStock = p.activo === false;
+    if (modalImg) {
+        modalImg.classList.toggle('grayscale', sinStock);
+        modalImg.classList.toggle('opacity-50', sinStock);
+    }
+    const modalBadgeNuevo = document.getElementById('modal-badge-nuevo');
+    if (modalBadgeNuevo) modalBadgeNuevo.classList.toggle('hidden', sinStock || !esProductoNuevoVigente(p));
+    const modalBadgeSinStock = document.getElementById('modal-badge-sin-stock');
+    if (modalBadgeSinStock) modalBadgeSinStock.classList.toggle('hidden', !sinStock);
+    const modalBtnAgregar = document.getElementById('modal-btn-agregar');
+    const modalBtnAgregarTexto = document.getElementById('modal-btn-agregar-texto');
+    if (modalBtnAgregar) {
+        modalBtnAgregar.disabled = sinStock;
+        if (modalBtnAgregarTexto) modalBtnAgregarTexto.textContent = sinStock ? 'Sin stock' : 'Agregar al carrito';
+    }
+
+    actualizarPrecioYWhatsapp();
 }
 
 function manejarProductoEliminado(viejo) {
@@ -629,20 +665,39 @@ async function manejarProductoInsertado(nuevo) {
 // ------------------------------------------------------------
 // AVISO "PRODUCTOS NUEVOS" (agrupa varios inserts mientras el usuario navega)
 // ------------------------------------------------------------
+// Timer del autoocultado (20s). Se reinicia cada vez que el aviso se
+// actualiza (por ej. llega otro producto nuevo mientras ya estaba visible).
+let avisoProductosNuevosTimer = null;
+
+// El aviso queda fijo justo debajo del header (que tiene su propia altura
+// variable: cambia con el wrap de la barra de búsqueda en pantallas chicas).
+// Se recalcula cada vez que se muestra y también al redimensionar/rotar.
 function posicionarAvisoProductosNuevos() {
     const el = document.getElementById('aviso-productos-nuevos');
     const header = document.getElementById('site-header');
     if (!el || !header) return;
-    el.style.top = (header.offsetHeight + 10) + 'px';
+    el.style.top = (header.offsetHeight + 12) + 'px';
 }
 window.addEventListener('resize', posicionarAvisoProductosNuevos);
+
+// Oculta el aviso deslizándolo de nuevo hacia arriba (reversa de la entrada)
+// y recién después de que termina la transición le agrega `hidden`, para no
+// cortar la animación.
+function ocultarAvisoProductosNuevos() {
+    const el = document.getElementById('aviso-productos-nuevos');
+    if (!el) return;
+    el.classList.remove('aviso-visible');
+    setTimeout(() => el.classList.add('hidden'), 500);
+}
 
 function mostrarAvisoProductosNuevos() {
     const el = document.getElementById('aviso-productos-nuevos');
     if (!el) return;
 
+    clearTimeout(avisoProductosNuevosTimer);
+
     if (productosNuevosPendientes.length === 0) {
-        el.classList.add('hidden');
+        ocultarAvisoProductosNuevos();
         return;
     }
 
@@ -674,32 +729,54 @@ function mostrarAvisoProductosNuevos() {
     // pendientes a la grilla de una ("Ver novedades") sin forzar un
     // refresh completo de la página.
     const accionPrincipal = cantidad === 1
-        ? `<button onclick="verProductoNuevoDesdeAviso('${productosNuevosPendientes[0].id}')" class="bg-black text-white px-4 py-2 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 whitespace-nowrap">Ver producto</button>`
-        : `<button onclick="verNovedadesProductos()" class="bg-black text-white px-4 py-2 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 whitespace-nowrap">Ver novedades</button>`;
+        ? `<button onclick="verProductoNuevoDesdeAviso('${productosNuevosPendientes[0].id}')" class="w-full sm:w-auto text-center bg-black text-white px-4 py-2 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 whitespace-nowrap">Ver producto</button>`
+        : `<button onclick="verNovedadesProductos()" class="w-full sm:w-auto text-center bg-black text-white px-4 py-2 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 whitespace-nowrap">Ver novedades</button>`;
 
     el.innerHTML = `
-        <div class="flex items-start gap-2.5 min-w-0">
-            <span class="text-base leading-none mt-0.5 flex-shrink-0">✨</span>
-            <div class="min-w-0">
-                <p class="text-sm font-bold leading-snug">${textoTitulo}</p>
-                ${extra}
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 pr-9 sm:pr-4">
+            <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+                <span class="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center">
+                    <svg class="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M6.2 2 3 6.2V20a2 2 0 002 2h14a2 2 0 002-2V6.2L17.8 2z"/>
+                        <path d="M3 6.2h18"/>
+                        <path d="M16 10.2a4 4 0 01-8 0"/>
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="text-sm font-bold leading-snug">${textoTitulo}</p>
+                    ${extra}
+                </div>
+            </div>
+            <div class="sm:flex-shrink-0">
+                ${accionPrincipal}
             </div>
         </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-            ${accionPrincipal}
-            <button onclick="cerrarAvisoProductosNuevos()" aria-label="Cerrar aviso" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:text-black hover:bg-yellow-100 transition-colors flex-shrink-0">✕</button>
-        </div>`;
+        <button onclick="cerrarAvisoProductosNuevos()" aria-label="Cerrar aviso" class="absolute top-3 right-3 sm:top-1/2 sm:-translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center text-gray-400 hover:text-black hover:bg-gray-100 transition-colors">
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M6 18L18 6"/></svg>
+        </button>`;
 
+    // Entra deslizándose desde arriba. Se saca `hidden` primero y recién en
+    // el siguiente frame se agrega `aviso-visible`, para que la transición
+    // CSS se dispare siempre (incluso si el aviso ya estaba abierto y solo
+    // cambió el texto por otro producto nuevo).
     el.classList.remove('hidden');
+    void el.offsetWidth;
+    el.classList.add('aviso-visible');
+
+    // Se autooculta a los 20s para no molestar al visitante. Si llega otro
+    // producto nuevo mientras está visible, el timer se reinicia arriba.
+    avisoProductosNuevosTimer = setTimeout(cerrarAvisoProductosNuevos, 20000);
 }
 
-// El usuario cierra el aviso sin interesarle: se descarta la lista de
-// pendientes y sigue navegando normal. Esos productos van a aparecer solos
-// la próxima vez que se resincronice el catálogo completo (recarga de
-// página, reconexión, etc.), no hace falta "recordarlos" acá.
+// El usuario cierra el aviso (a mano o por el autoocultado de 20s): se
+// descarta la lista de pendientes y sigue navegando normal. Esos productos
+// van a aparecer solos la próxima vez que se resincronice el catálogo
+// completo (recarga de página, reconexión, etc.), no hace falta
+// "recordarlos" acá.
 function cerrarAvisoProductosNuevos() {
+    clearTimeout(avisoProductosNuevosTimer);
     productosNuevosPendientes = [];
-    mostrarAvisoProductosNuevos();
+    ocultarAvisoProductosNuevos();
 }
 
 // Trae de Supabase (con sus joins) los productos pendientes que el usuario
@@ -1198,7 +1275,8 @@ async function verDetalles(id) {
     cantidadModalActual = 1;
     document.getElementById('modal-cantidad').innerText = '1';
 
-    document.getElementById('modal-img').src = p.imagen_url || '';
+    const modalImg = document.getElementById('modal-img');
+    modalImg.src = p.imagen_url || '';
     document.getElementById('modal-nombre').innerText = p.nombre;
     const modalTienda = document.getElementById('modal-tienda');
     modalTienda.innerText = p.emprendedores ? p.emprendedores.nombre_tienda : '';
@@ -1211,6 +1289,10 @@ async function verDetalles(id) {
     if (modalCategoria) modalCategoria.innerText = p.categorias ? p.categorias.nombre : 'General';
     const modalBadgeNuevo = document.getElementById('modal-badge-nuevo');
     const sinStock = p.activo === false;
+    // Mismo tratamiento visual que la card de la grilla (ver crearCardHtmlProducto):
+    // imagen en blanco y negro y semi-transparente cuando el producto está sin stock.
+    modalImg.classList.toggle('grayscale', sinStock);
+    modalImg.classList.toggle('opacity-50', sinStock);
     if (modalBadgeNuevo) modalBadgeNuevo.classList.toggle('hidden', sinStock || !esProductoNuevoVigente(p));
     const modalBadgeSinStock = document.getElementById('modal-badge-sin-stock');
     if (modalBadgeSinStock) modalBadgeSinStock.classList.toggle('hidden', !sinStock);
@@ -2534,6 +2616,22 @@ async function enviarPedidoWhatsapp() {
 // ============================================================
 let postulacionTipoElegido = null; // 'emprendedor' | 'comercio_vender' | 'comercio_membresia'
 
+// Antes el título del modal se armaba concatenando texto ("Quiero vender ·
+// Comercio") en un solo <h2> con `truncate`, y en pantallas chicas el texto
+// se cortaba con "…" a mitad de palabra. Ahora el título queda siempre fijo
+// y corto, y el tipo de perfil elegido se muestra aparte como un tag chico
+// al lado (ver .cp-postmodal__tag en el <style> de index.html).
+function setTituloPostulacion(titulo, tag) {
+    document.getElementById('postulacion-titulo').textContent = titulo;
+    const elTag = document.getElementById('postulacion-subtitulo');
+    if (tag) {
+        elTag.textContent = tag;
+        elTag.classList.remove('hidden');
+    } else {
+        elTag.classList.add('hidden');
+    }
+}
+
 function abrirModalPostulacion() {
     postulacionTipoElegido = null;
     document.getElementById('form-postulacion').reset();
@@ -2543,7 +2641,7 @@ function abrirModalPostulacion() {
     document.getElementById('postulacion-paso-exito').classList.add('hidden');
     document.getElementById('postulacion-paso-comercio').classList.add('hidden');
     document.getElementById('postulacion-paso-tipo').classList.remove('hidden');
-    document.getElementById('postulacion-titulo').textContent = 'Quiero vender';
+    setTituloPostulacion('Quiero vender');
 
     document.getElementById('modal-postulacion').classList.remove('hidden');
     bloquearScrollBody();
@@ -2562,13 +2660,13 @@ function elegirTipoPostulacion(tipo) {
     // comercio: preguntamos el interés puntual antes de mostrar el formulario
     document.getElementById('postulacion-paso-tipo').classList.add('hidden');
     document.getElementById('postulacion-paso-comercio').classList.remove('hidden');
-    document.getElementById('postulacion-titulo').textContent = 'Quiero vender · Comercio';
+    setTituloPostulacion('Quiero vender', 'Comercio');
 }
 
 function volverAPasoTipoPostulacion() {
     document.getElementById('postulacion-paso-comercio').classList.add('hidden');
     document.getElementById('postulacion-paso-tipo').classList.remove('hidden');
-    document.getElementById('postulacion-titulo').textContent = 'Quiero vender';
+    setTituloPostulacion('Quiero vender');
 }
 
 function elegirInteresComercio(interes) {
@@ -2583,10 +2681,10 @@ function volverDesdeFormularioPostulacion() {
 
     if (postulacionTipoElegido === 'emprendedor') {
         document.getElementById('postulacion-paso-tipo').classList.remove('hidden');
-        document.getElementById('postulacion-titulo').textContent = 'Quiero vender';
+        setTituloPostulacion('Quiero vender');
     } else {
         document.getElementById('postulacion-paso-comercio').classList.remove('hidden');
-        document.getElementById('postulacion-titulo').textContent = 'Quiero vender · Comercio';
+        setTituloPostulacion('Quiero vender', 'Comercio');
     }
 }
 
@@ -2596,11 +2694,12 @@ function iniciarFormularioPostulacion(tipo) {
     document.getElementById('post-tipo').value = tipo;
 
     const titulos = {
-        emprendedor: 'Quiero vender · Emprendedor',
-        comercio_vender: 'Quiero vender · Comercio',
-        comercio_membresia: 'Membresía · Comercio',
+        emprendedor: ['Quiero vender', 'Emprendedor'],
+        comercio_vender: ['Quiero vender', 'Comercio'],
+        comercio_membresia: ['Membresía', 'Comercio'],
     };
-    document.getElementById('postulacion-titulo').textContent = titulos[tipo] || 'Quiero vender';
+    const [titulo, tag] = titulos[tipo] || ['Quiero vender', null];
+    setTituloPostulacion(titulo, tag);
 
     const esComercio = tipo !== 'emprendedor';
     document.getElementById('post-label-negocio').textContent = esComercio ? 'Nombre del comercio' : 'Nombre de tu emprendimiento';
@@ -2650,7 +2749,7 @@ function irAPasoFormulario(paso) {
 }
 
 function actualizarProgresoPostulacion(pasoActivo) {
-    const activo = 'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-colors bg-black text-white';
+    const activo = 'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-colors bg-yellow-400 text-black shadow-[0_4px_10px_rgba(250,204,21,0.45)]';
     const pendiente = 'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-colors bg-gray-100 text-gray-400';
 
     document.getElementById('progreso-punto-1').className = pasoActivo >= 1 ? activo : pendiente;
