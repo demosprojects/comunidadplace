@@ -22,6 +22,31 @@
         .panel-scroll::-webkit-scrollbar-thumb:hover { background: #c7c7c7; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        /* Aviso de "producto nuevo": vive fijo abajo, centrado, y entra/sale
+           deslizándose desde el borde inferior sin tapar el resto de la
+           pantalla. Arranca desplazado hacia abajo y transparente; la clase
+           .aviso-visible (agregada/quitada por JS) lo sube y lo muestra. */
+        #aviso-productos-nuevos {
+            /* El div también trae la clase Tailwind "relative" (para que el
+               botón de cerrar, que es "absolute", se posicione respecto a
+               este contenedor). Como el CDN de Tailwind genera .relative
+               DESPUÉS de .fixed en su hoja de estilos, sin este "position:
+               fixed" explícito (con especificidad de ID, que le gana a
+               cualquier clase) la clase .relative terminaba ganando y el
+               aviso quedaba metido en el flujo normal del documento en vez
+               de fijo sobre la pantalla. */
+            position: fixed;
+            /* "top" lo pone JS (posicionarAvisoProductosNuevos), a la altura
+               justo debajo del header; acá solo se anima el slide, que
+               arranca oculto por encima de su posición final. */
+            transform: translate(-50%, calc(-100% - 1.5rem));
+            opacity: 0;
+            transition: transform 0.5s cubic-bezier(.16,1,.3,1), opacity 0.4s ease;
+        }
+        #aviso-productos-nuevos.aviso-visible {
+            transform: translate(-50%, 0);
+            opacity: 1;
+        }
         @keyframes splashPulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.08); }
@@ -162,6 +187,91 @@
             .zoom-trigger:hover .zoom-badge { opacity: 1; transform: scale(1); }
             .zoom-trigger:hover .zoom-img { transform: scale(1.035); }
         }
+
+        /* ============================================================
+           MODAL "QUIERO VENDER" (postulación)
+           ============================================================ */
+
+        /* Encabezado con borde inferior sutil en degradé: separa el
+           título del contenido scrolleable sin una línea dura de 1px
+           que se vea "cortada" a los costados. */
+        .cp-postmodal__header {
+            position: relative;
+        }
+        .cp-postmodal__header::after {
+            content: '';
+            position: absolute;
+            left: 1.5rem;
+            right: 1.5rem;
+            bottom: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.08) 15%, rgba(0,0,0,0.08) 85%, transparent);
+        }
+
+        .cp-postmodal__eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #ca8a04; /* yellow-600 */
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+        .cp-postmodal__eyebrow-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 9999px;
+            background: #facc15; /* yellow-400 */
+            flex-shrink: 0;
+        }
+
+        /* Título: SIN truncate. Antes se cortaba con "…" apenas el texto
+           combinado (ej. "Quiero vender · Comercio") no entraba en una
+           sola línea, sobre todo en mobile. Ahora el tipo de perfil se
+           muestra aparte (ver .cp-postmodal__tag) y el título siempre
+           es corto y fijo, pero además queda preparado para envolver en
+           dos líneas sin cortarse si hiciera falta. */
+        .cp-postmodal__title {
+            font-size: 1.375rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+            line-height: 1.05;
+            letter-spacing: -0.01em;
+            overflow-wrap: break-word;
+        }
+        @media (min-width: 640px) { .cp-postmodal__title { font-size: 1.5rem; } }
+
+        /* Tag del tipo de perfil elegido (Emprendedor / Comercio), al
+           lado del título en vez de concatenado dentro de él. */
+        .cp-postmodal__tag {
+            display: inline-flex;
+            align-items: center;
+            background: #111114;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            white-space: nowrap;
+        }
+
+        .cp-postmodal__close {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9999px;
+            background: #f3f4f6;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+        }
+        .cp-postmodal__close:hover { background: #111114; color: #fff; }
+        .cp-postmodal__close:active { transform: scale(0.92); }
     </style>
 </head>
 <body class="bg-white text-black overflow-x-hidden">
@@ -453,9 +563,10 @@
 
         <!-- Aviso de productos nuevos detectados por Realtime: se arma y
              muestra desde JS (mostrarAvisoProductosNuevos en main.js). Queda
-             fijo debajo del header para que se vea sin importar en qué parte
-             de la grilla esté navegando el usuario. -->
-        <div id="aviso-productos-nuevos" class="hidden fixed left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-lg flex items-start sm:items-center gap-2.5 sm:gap-4 justify-between bg-yellow-50 border-2 border-yellow-400 rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5 shadow-xl animate-fade-in"></div>
+             fijo debajo del header, centrado, y baja deslizándose sin
+             importar en qué parte de la grilla esté navegando el usuario
+             (ver "position: fixed" explícito en el <style> de arriba). -->
+        <div id="aviso-productos-nuevos" class="hidden fixed left-1/2 z-40 w-[calc(100%-2rem)] max-w-md sm:max-w-lg bg-white border border-gray-100 rounded-2xl shadow-2xl shadow-black/10 overflow-hidden relative"></div>
 
         <div id="contenedor-productos" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 lg:gap-5">
             <div class="rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden bg-white">
@@ -1023,33 +1134,39 @@
     <div id="modal-postulacion" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/85" onclick="cerrarModalPostulacion()"></div>
 
-        <div class="cp-postmodal bg-white w-full max-w-[420px] rounded-[28px] relative z-10 shadow-2xl animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="cp-postmodal bg-white w-full max-w-[440px] rounded-[28px] relative z-10 shadow-2xl animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
 
             <!-- Encabezado -->
-            <div class="flex items-start justify-between px-6 pt-6 pb-1 flex-shrink-0">
-                <div class="min-w-0">
-                    <p class="text-yellow-600 text-[10px] font-black uppercase tracking-widest mb-1">Sumate a la comunidad</p>
-                    <h2 id="postulacion-titulo" class="text-lg sm:text-xl font-900 uppercase italic leading-tight truncate">Quiero vender</h2>
+            <div class="cp-postmodal__header flex items-start justify-between gap-3 px-6 sm:px-7 pt-6 pb-5 flex-shrink-0">
+                <div class="min-w-0 flex-1">
+                    <p class="cp-postmodal__eyebrow">
+                        <span class="cp-postmodal__eyebrow-dot"></span>
+                        Sumate a la comunidad
+                    </p>
+                    <div class="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1.5">
+                        <h2 id="postulacion-titulo" class="cp-postmodal__title">Quiero vender</h2>
+                        <span id="postulacion-subtitulo" class="cp-postmodal__tag hidden">Emprendedor</span>
+                    </div>
                 </div>
-                <button type="button" onclick="cerrarModalPostulacion()" aria-label="Cerrar" class="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-black transition-colors ml-3">
+                <button type="button" onclick="cerrarModalPostulacion()" aria-label="Cerrar" class="cp-postmodal__close flex-shrink-0">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M6 18L18 6"/></svg>
                 </button>
             </div>
 
             <!-- Indicador de progreso (solo visible durante el formulario) -->
-            <div id="postulacion-progreso" class="hidden items-center gap-2 px-6 pt-4 flex-shrink-0">
-                <div class="flex items-center gap-1.5">
+            <div id="postulacion-progreso" class="cp-postmodal__progreso hidden items-center gap-3 px-6 sm:px-7 pb-4 flex-shrink-0">
+                <div class="flex items-center gap-2">
                     <span id="progreso-punto-1" class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-colors"></span>
                     <span class="text-[11px] font-bold uppercase tracking-wide text-gray-400">Datos</span>
                 </div>
-                <div class="flex-1 h-px bg-gray-150 bg-gray-200"></div>
-                <div class="flex items-center gap-1.5">
+                <div class="flex-1 h-px bg-gray-200"></div>
+                <div class="flex items-center gap-2">
                     <span id="progreso-punto-2" class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-colors"></span>
                     <span class="text-[11px] font-bold uppercase tracking-wide text-gray-400">Negocio</span>
                 </div>
             </div>
 
-            <div class="overflow-y-auto px-6 py-5 flex-1">
+            <div class="cp-postmodal__body overflow-y-auto px-6 sm:px-7 py-5 flex-1">
 
                 <!-- PASO A: elegir perfil -->
                 <div id="postulacion-paso-tipo">
@@ -1130,17 +1247,17 @@
 
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Nombre y apellido</label>
-                            <input type="text" id="post-nombre" required placeholder="Tu nombre completo" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            <input type="text" id="post-nombre" required placeholder="Tu nombre completo" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">WhatsApp</label>
-                            <input type="tel" id="post-whatsapp" required placeholder="Ej: 3644123456" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            <input type="tel" id="post-whatsapp" required placeholder="Ej: 3644123456" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Email</label>
-                            <input type="email" id="post-email" required placeholder="tu@email.com" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            <input type="email" id="post-email" required placeholder="tu@email.com" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
                         </div>
 
                         <button type="button" onclick="irAPasoFormulario(2)" class="w-full bg-black text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl mt-2 inline-flex items-center justify-center gap-2">
@@ -1159,28 +1276,28 @@
 
                         <div>
                             <label id="post-label-negocio" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Nombre de tu emprendimiento</label>
-                            <input type="text" id="post-negocio" placeholder="Ej: Velas Lumen" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            <input type="text" id="post-negocio" placeholder="Ej: Velas Lumen" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Ciudad</label>
-                                <input type="text" id="post-ciudad" placeholder="Sáenz Peña" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                                <input type="text" id="post-ciudad" placeholder="Sáenz Peña" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
                             </div>
                             <div>
                                 <label id="post-label-categoria" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Rubro</label>
-                                <input type="text" id="post-categoria" placeholder="Indumentaria..." class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                                <input type="text" id="post-categoria" placeholder="Indumentaria..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
                             </div>
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Instagram (opcional)</label>
-                            <input type="text" id="post-instagram" placeholder="@tu_usuario" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
+                            <input type="text" id="post-instagram" placeholder="@tu_usuario" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all">
                         </div>
 
                         <div>
                             <label id="post-label-mensaje" class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">Contanos un poco más</label>
-                            <textarea id="post-mensaje" rows="3" placeholder="Qué productos ofrecés, hace cuánto emprendés, etc." class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all resize-none"></textarea>
+                            <textarea id="post-mensaje" rows="3" placeholder="Qué productos ofrecés, hace cuánto emprendés, etc." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3.5 text-sm font-semibold focus:bg-white focus:border-black focus:ring-4 focus:ring-yellow-400/20 outline-none transition-all resize-none"></textarea>
                         </div>
 
                         <input type="hidden" id="post-tipo" value="">
