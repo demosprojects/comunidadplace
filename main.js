@@ -1,6 +1,7 @@
 let productos = [];        // productos ya traídos de Supabase (con joins)
 let categoriasDB = [];
-let emprendedoresCache = {}; // id -> {id, nombre_tienda, logo_url}, se llena en cargarEmprendedoresFila()
+let emprendedoresCache = {}; // id -> datos del emprendedor, se llena en cargarEmprendedoresFila()
+let emprendedoresLista = []; // lista activa para el directorio "Ver todos"
 let productosNuevosPendientes = []; // productos que llegaron por INSERT y todavía no se incorporaron a la grilla: [{id, emprendedor_nombre}]
 let visitorId = null;
 let productoModalActual = null;
@@ -299,16 +300,29 @@ function actualizarBotonLimpiarFiltros() {
 async function cargarEmprendedoresFila() {
     const { data, error } = await supabase
         .from('emprendedores')
-        .select('id, nombre_tienda, logo_url')
+        .select('id, nombre_tienda, logo_url, banner_url, bio, medios_pago')
         .eq('activo', true)
         .order('nombre_tienda');
     if (error) { console.error(error); return; }
 
-    // Caché id -> datos básicos del emprendedor, usada por el manejo de
+    // Caché id -> datos del emprendedor, usada por el manejo de
     // Realtime de productos (armar el aviso de "producto nuevo de X" sin
-    // tener que ir a buscar el nombre de la tienda a Supabase cada vez).
+    // tener que ir a buscar el nombre de la tienda a Supabase cada vez)
+    // y por el directorio "Ver todos".
+    emprendedoresLista = data || [];
     emprendedoresCache = {};
-    data.forEach(e => { emprendedoresCache[e.id] = e; });
+    emprendedoresLista.forEach(e => { emprendedoresCache[e.id] = e; });
+
+    const sinEmprendedores = emprendedoresLista.length === 0;
+    const btnVerTodosDesktop = document.getElementById('btn-ver-todos-emprendedores-desktop');
+    const btnVerTodosMobile = document.getElementById('btn-ver-todos-emprendedores-mobile');
+    if (btnVerTodosDesktop) btnVerTodosDesktop.classList.toggle('cp-emp-oculto', sinEmprendedores);
+    if (btnVerTodosMobile) btnVerTodosMobile.classList.toggle('cp-emp-oculto', sinEmprendedores);
+
+    const directorioAbierto = document.getElementById('modal-directorio-emprendedores');
+    if (directorioAbierto && !directorioAbierto.classList.contains('hidden')) {
+        renderDirectorioEmprendedores();
+    }
 
     // --- Fila de logos debajo del banner (abre el perfil del emprendedor) ---
     const cont = document.getElementById('emprendedores-fila');
@@ -1432,10 +1446,12 @@ function renderMediosPagoModal(p) {
 
     if (mediosProducto.length === 0) {
         wrap.classList.add('hidden');
+        wrap.classList.remove('inline-flex');
         return;
     }
 
     wrap.classList.remove('hidden');
+    wrap.classList.add('inline-flex');
 }
 
 // Modal secundario: lista de medios de pago disponibles para el producto
@@ -1818,6 +1834,119 @@ function desbloquearScrollBody() {
         document.body.classList.remove('cp-modal-abierto');
         window.scrollTo(0, _scrollYGuardado);
     }
+}
+
+// ============================================================
+// DIRECTORIO "VER TODOS" LOS EMPRENDEDORES
+// ============================================================
+function urlImagenDirectorio(url, tipo) {
+    if (!url) return '';
+    const marcador = '/upload/';
+    const i = url.indexOf(marcador);
+    if (i === -1) return url;
+    const transform = tipo === 'logo'
+        ? 'w_160,h_160,c_pad,b_white,e_trim,q_auto,f_auto'
+        : 'w_900,h_320,c_fill,g_center,e_trim,q_auto,f_auto';
+    return url.slice(0, i + marcador.length) + transform + '/' + url.slice(i + marcador.length);
+}
+
+function chipsMediosPagoDirectorio(ids) {
+    const lista = Array.isArray(ids) ? ids : [];
+    if (lista.length === 0) {
+        return `<span class="text-[10px] font-semibold text-gray-400">Sin medios de pago</span>`;
+    }
+    const chip = (id, visibilidad) => `
+        <span class="${visibilidad} items-center gap-1 bg-gray-50 border border-gray-100 px-2 py-1 rounded-full text-[10px] font-semibold text-gray-600 whitespace-nowrap">
+            <span class="w-3.5 h-3.5 flex-shrink-0 flex items-center justify-center">${iconoMedioPago(id)}</span>
+            ${escapeHtml(nombreMedioPago(id))}
+        </span>`;
+    const primero = lista[0] ? chip(lista[0], 'inline-flex') : '';
+    const segundo = lista[1] ? chip(lista[1], 'inline-flex') : '';
+    const tercero = lista[2] ? chip(lista[2], 'hidden sm:inline-flex') : '';
+    const extraMobile = Math.max(0, lista.length - 2);
+    const extraDesktop = Math.max(0, lista.length - 3);
+    const mas = extraMobile > 0
+        ? `<span class="inline-flex sm:hidden items-center px-2 py-1 rounded-full bg-gray-100 text-[10px] font-black text-gray-500">+${extraMobile}</span>
+           ${extraDesktop > 0 ? `<span class="hidden sm:inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-[10px] font-black text-gray-500">+${extraDesktop}</span>` : ''}`
+        : '';
+    return primero + segundo + tercero + mas;
+}
+
+function renderDirectorioEmprendedores() {
+    const cont = document.getElementById('directorio-emprendedores-lista');
+    const contador = document.getElementById('directorio-emprendedores-contador');
+    if (!cont) return;
+
+    const total = emprendedoresLista.length;
+    if (contador) {
+        contador.textContent = total === 0
+            ? 'Todavía no hay tiendas publicadas'
+            : `${total} tienda${total === 1 ? '' : 's'} en la comunidad`;
+    }
+
+    if (total === 0) {
+        cont.innerHTML = `<p class="col-span-full text-center py-10 text-gray-400 text-sm font-semibold">No hay emprendedores para mostrar.</p>`;
+        return;
+    }
+
+    cont.innerHTML = emprendedoresLista.map(e => {
+        const inicial = e.nombre_tienda ? e.nombre_tienda.charAt(0).toUpperCase() : '?';
+        const bannerSrc = urlImagenDirectorio(e.banner_url, 'banner');
+        const logoSrc = urlImagenDirectorio(e.logo_url, 'logo');
+        const banner = bannerSrc
+            ? `<img src="${escapeHtml(bannerSrc)}" alt="" class="absolute inset-0 w-full h-full object-cover">`
+            : '';
+        const avatarDesktop = logoSrc
+            ? `<img src="${escapeHtml(logoSrc)}" alt="${escapeHtml(e.nombre_tienda)}" class="w-16 h-16 rounded-2xl object-contain p-1 bg-white ring-[3px] ring-white shadow-md">`
+            : `<span class="w-16 h-16 rounded-2xl bg-black text-white ring-[3px] ring-white shadow-md flex items-center justify-center text-xl font-900">${escapeHtml(inicial)}</span>`;
+        const avatarMobile = logoSrc
+            ? `<img src="${escapeHtml(logoSrc)}" alt="${escapeHtml(e.nombre_tienda)}" class="w-12 h-12 rounded-xl object-contain p-0.5 bg-white border border-gray-100 flex-shrink-0">`
+            : `<span class="w-12 h-12 rounded-xl bg-black text-white flex-shrink-0 flex items-center justify-center text-base font-900">${escapeHtml(inicial)}</span>`;
+        const bio = (e.bio || '').trim()
+            ? escapeHtml(e.bio)
+            : 'Este emprendedor todavía no cargó una descripción.';
+        return `
+            <button type="button" onclick="abrirPerfilEmprendedor('${e.id}')" class="group w-full sm:h-full flex flex-col text-left bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:border-black hover:shadow-xl transition-all active:scale-[0.99]">
+                <div class="relative h-16 sm:h-32 flex-shrink-0 overflow-hidden bg-zinc-900">
+                    <div class="absolute inset-0" style="background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1.5px, transparent 1.5px); background-size: 16px 16px;"></div>
+                    ${banner}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none"></div>
+                </div>
+                <div class="flex flex-row items-start gap-3 p-3 sm:flex-col sm:px-4 sm:pt-0 sm:pb-4 sm:gap-0">
+                    <div class="hidden sm:block relative z-10 -mt-8 mb-3">${avatarDesktop}</div>
+                    <div class="sm:hidden flex-shrink-0">${avatarMobile}</div>
+                    <div class="flex-1 min-w-0 flex flex-col">
+                        <h3 class="font-900 uppercase italic leading-tight text-sm sm:text-base truncate">${escapeHtml(e.nombre_tienda)}</h3>
+                        <p class="text-gray-500 text-[11px] sm:text-xs leading-snug mt-0.5 sm:mt-1.5 line-clamp-1 sm:line-clamp-2 sm:min-h-[2.5rem]">${bio}</p>
+                        <div class="mt-2 sm:mt-auto sm:pt-3 sm:border-t sm:border-gray-100">
+                            <div class="flex flex-nowrap overflow-hidden gap-1 sm:flex-wrap sm:gap-1.5">
+                                ${chipsMediosPagoDirectorio(e.medios_pago)}
+                            </div>
+                            <span class="mt-2 sm:mt-3 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-black">
+                                Ver productos
+                                <svg class="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6"/></svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </button>
+        `;
+    }).join('');
+}
+
+function abrirDirectorioEmprendedores() {
+    renderDirectorioEmprendedores();
+    const modal = document.getElementById('modal-directorio-emprendedores');
+    if (!modal || !modal.classList.contains('hidden')) return;
+    modal.classList.remove('hidden');
+    bloquearScrollBody();
+}
+
+function cerrarDirectorioEmprendedores() {
+    const modal = document.getElementById('modal-directorio-emprendedores');
+    if (!modal || modal.classList.contains('hidden')) return;
+    modal.classList.add('hidden');
+    desbloquearScrollBody();
 }
 
 // ============================================================
