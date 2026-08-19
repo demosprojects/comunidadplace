@@ -1096,10 +1096,12 @@ function renderMediosPagoModal(p) {
 
     if (mediosProducto.length === 0) {
         wrap.classList.add('hidden');
+        wrap.classList.remove('inline-flex');
         return;
     }
 
     wrap.classList.remove('hidden');
+    wrap.classList.add('inline-flex');
 }
 
 // Modal secundario: lista de medios de pago disponibles para el producto
@@ -2103,3 +2105,197 @@ async function enviarPedidoWhatsapp() {
     window.addEventListener('scroll', actualizarVisibilidadBtnScrollTop, { passive: true });
     actualizarVisibilidadBtnScrollTop();
 })();
+
+// ============================================================
+// POSTULACIÓN ("Quiero vender"): mismo flujo que index.html.
+// Se guarda en la tabla `postulaciones` y el admin la gestiona
+// desde admin.html -> sección "Postulación".
+// ============================================================
+let postulacionTipoElegido = null;
+
+function setTituloPostulacion(titulo, tag) {
+    document.getElementById('postulacion-titulo').textContent = titulo;
+    const elTag = document.getElementById('postulacion-subtitulo');
+    if (tag) {
+        elTag.textContent = tag;
+        elTag.classList.remove('hidden');
+    } else {
+        elTag.classList.add('hidden');
+    }
+}
+
+function abrirModalPostulacion() {
+    postulacionTipoElegido = null;
+    document.getElementById('form-postulacion').reset();
+    document.getElementById('form-postulacion').classList.add('hidden');
+    document.getElementById('postulacion-progreso').classList.add('hidden');
+    document.getElementById('postulacion-progreso').classList.remove('flex');
+    document.getElementById('postulacion-paso-exito').classList.add('hidden');
+    document.getElementById('postulacion-paso-comercio').classList.add('hidden');
+    document.getElementById('postulacion-paso-tipo').classList.remove('hidden');
+    setTituloPostulacion('Quiero vender');
+
+    document.getElementById('modal-postulacion').classList.remove('hidden');
+    bloquearScrollBody();
+}
+
+function cerrarModalPostulacion() {
+    document.getElementById('modal-postulacion').classList.add('hidden');
+    desbloquearScrollBody();
+}
+
+function elegirTipoPostulacion(tipo) {
+    if (tipo === 'emprendedor') {
+        iniciarFormularioPostulacion('emprendedor');
+        return;
+    }
+    document.getElementById('postulacion-paso-tipo').classList.add('hidden');
+    document.getElementById('postulacion-paso-comercio').classList.remove('hidden');
+    setTituloPostulacion('Quiero vender', 'Comercio');
+}
+
+function volverAPasoTipoPostulacion() {
+    document.getElementById('postulacion-paso-comercio').classList.add('hidden');
+    document.getElementById('postulacion-paso-tipo').classList.remove('hidden');
+    setTituloPostulacion('Quiero vender');
+}
+
+function elegirInteresComercio(interes) {
+    iniciarFormularioPostulacion(interes);
+}
+
+function volverDesdeFormularioPostulacion() {
+    document.getElementById('form-postulacion').classList.add('hidden');
+    document.getElementById('postulacion-progreso').classList.add('hidden');
+    document.getElementById('postulacion-progreso').classList.remove('flex');
+
+    if (postulacionTipoElegido === 'emprendedor') {
+        document.getElementById('postulacion-paso-tipo').classList.remove('hidden');
+        setTituloPostulacion('Quiero vender');
+    } else {
+        document.getElementById('postulacion-paso-comercio').classList.remove('hidden');
+        setTituloPostulacion('Quiero vender', 'Comercio');
+    }
+}
+
+function iniciarFormularioPostulacion(tipo) {
+    postulacionTipoElegido = tipo;
+    document.getElementById('post-tipo').value = tipo;
+
+    const titulos = {
+        emprendedor: ['Quiero vender', 'Emprendedor'],
+        comercio_vender: ['Quiero vender', 'Comercio'],
+        comercio_membresia: ['Membresía', 'Comercio'],
+    };
+    const [titulo, tag] = titulos[tipo] || ['Quiero vender', null];
+    setTituloPostulacion(titulo, tag);
+
+    const esComercio = tipo !== 'emprendedor';
+    document.getElementById('post-label-negocio').textContent = esComercio ? 'Nombre del comercio' : 'Nombre de tu emprendimiento';
+    document.getElementById('post-negocio').placeholder = esComercio ? 'Ej: Almacén del Centro' : 'Ej: Velas Lumen';
+    document.getElementById('post-label-categoria').textContent = esComercio ? 'Rubro del comercio' : 'Rubro / categoría';
+    document.getElementById('postulacion-form-paso-2-intro').textContent = esComercio ? 'Contanos sobre tu comercio.' : 'Contanos sobre tu emprendimiento.';
+
+    if (tipo === 'comercio_membresia') {
+        document.getElementById('post-label-mensaje').textContent = 'Contanos sobre tu comercio';
+        document.getElementById('post-mensaje').placeholder = 'Qué tipo de comercio tenés y qué te interesa de la membresía.';
+    } else {
+        document.getElementById('post-label-mensaje').textContent = 'Contanos un poco más';
+        document.getElementById('post-mensaje').placeholder = 'Qué productos ofrecés, hace cuánto emprendés, etc.';
+    }
+
+    document.getElementById('postulacion-paso-tipo').classList.add('hidden');
+    document.getElementById('postulacion-paso-comercio').classList.add('hidden');
+    document.getElementById('form-postulacion').classList.remove('hidden');
+
+    const progreso = document.getElementById('postulacion-progreso');
+    progreso.classList.remove('hidden');
+    progreso.classList.add('flex');
+
+    irAPasoFormulario(1);
+}
+
+function irAPasoFormulario(paso) {
+    if (paso === 2) {
+        const nombre = document.getElementById('post-nombre');
+        const whatsapp = document.getElementById('post-whatsapp');
+        const email = document.getElementById('post-email');
+        if (!nombre.value.trim() || !whatsapp.value.trim() || !email.value.trim()) {
+            mostrarToast('Completá tu nombre, WhatsApp y email para continuar.', 'error');
+            [nombre, whatsapp, email].find(el => !el.value.trim())?.focus();
+            return;
+        }
+    }
+
+    document.getElementById('postulacion-form-paso-1').classList.toggle('hidden', paso !== 1);
+    document.getElementById('postulacion-form-paso-2').classList.toggle('hidden', paso !== 2);
+    actualizarProgresoPostulacion(paso);
+
+    if (paso === 1) document.getElementById('post-nombre').focus();
+    if (paso === 2) document.getElementById('post-negocio').focus();
+}
+
+function actualizarProgresoPostulacion(pasoActivo) {
+    const activo = 'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-colors bg-yellow-400 text-black shadow-[0_4px_10px_rgba(250,204,21,0.45)]';
+    const pendiente = 'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black transition-colors bg-gray-100 text-gray-400';
+
+    document.getElementById('progreso-punto-1').className = pasoActivo >= 1 ? activo : pendiente;
+    document.getElementById('progreso-punto-1').textContent = '1';
+    document.getElementById('progreso-punto-2').className = pasoActivo >= 2 ? activo : pendiente;
+    document.getElementById('progreso-punto-2').textContent = '2';
+}
+
+const formPostulacion = document.getElementById('form-postulacion');
+if (formPostulacion) {
+    formPostulacion.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' || e.target.tagName === 'TEXTAREA') return;
+
+        const enPaso1 = !document.getElementById('postulacion-form-paso-1').classList.contains('hidden');
+        if (enPaso1) {
+            e.preventDefault();
+            irAPasoFormulario(2);
+        }
+    });
+
+    formPostulacion.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const btn = document.getElementById('btn-enviar-postulacion');
+        const datos = {
+            tipo: document.getElementById('post-tipo').value,
+            nombre: document.getElementById('post-nombre').value.trim(),
+            nombre_negocio: document.getElementById('post-negocio').value.trim(),
+            whatsapp: document.getElementById('post-whatsapp').value.trim(),
+            email: document.getElementById('post-email').value.trim(),
+            ciudad: document.getElementById('post-ciudad').value.trim(),
+            categoria: document.getElementById('post-categoria').value.trim(),
+            instagram: document.getElementById('post-instagram').value.trim(),
+            mensaje: document.getElementById('post-mensaje').value.trim(),
+        };
+
+        const camposFaltantes = Object.entries(datos).some(([campo, valor]) => campo !== 'instagram' && !valor);
+        if (camposFaltantes) {
+            mostrarToast('Completá todos los campos para enviar la postulación.', 'error');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Enviando...';
+
+        const { error } = await supabase.from('postulaciones').insert(datos);
+
+        btn.disabled = false;
+        btn.textContent = 'Enviar postulación';
+
+        if (error) {
+            console.error('Error al enviar postulación:', error);
+            mostrarToast('No se pudo enviar la postulación. Probá de nuevo.', 'error');
+            return;
+        }
+
+        document.getElementById('form-postulacion').classList.add('hidden');
+        document.getElementById('postulacion-progreso').classList.add('hidden');
+        document.getElementById('postulacion-progreso').classList.remove('flex');
+        document.getElementById('postulacion-paso-exito').classList.remove('hidden');
+    });
+}
