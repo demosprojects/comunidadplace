@@ -300,7 +300,7 @@ function actualizarBotonLimpiarFiltros() {
 async function cargarEmprendedoresFila() {
     const { data, error } = await supabase
         .from('emprendedores')
-        .select('id, nombre_tienda, logo_url, banner_url, bio, medios_pago')
+        .select('id, nombre_tienda, logo_url, banner_url, bio, medios_pago, usuarios(usuario)')
         .eq('activo', true)
         .order('nombre_tienda');
     if (error) { console.error(error); return; }
@@ -944,31 +944,32 @@ function crearCardHtmlProducto(p) {
         t: tienda, l: logoTienda, nv: esProductoNuevoVigente(p), act: p.activo === false ? false : true
     }));
     return `
-        <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl lg:rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" data-producto-id="${p.id}" data-hash="${hash}" onclick="verDetalles('${p.id}')">
-            <div class="relative aspect-[4/5] lg:aspect-[4/3] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
-                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 lg:p-3.5 transition duration-300 ${sinStock ? 'grayscale opacity-50' : ''}" loading="lazy" decoding="async">
+        <div class="group cursor-pointer h-full flex flex-col bg-white rounded-md sm:rounded-lg border border-gray-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.12)] hover:border-gray-300 transition-all duration-200 overflow-hidden animate-fade-in" data-producto-id="${p.id}" data-hash="${hash}" onclick="verDetalles('${p.id}')">
+            <div class="relative aspect-square overflow-hidden bg-white flex-shrink-0 flex items-center justify-center">
+                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-4 sm:p-6 lg:p-5 transition-transform duration-300 group-hover:scale-[1.03] ${sinStock ? 'grayscale opacity-50' : ''}" loading="lazy" decoding="async">
                 ${sinStock ? `
-                <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-gray-800 text-white text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Sin stock</span>`
+                <span class="absolute top-2 left-2 bg-gray-700 text-white text-[8px] sm:text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wide">Sin stock</span>`
                 : (esProductoNuevoVigente(p) ? `
-                <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-yellow-400 text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Nuevo</span>` : '')}
+                <span class="absolute top-2 left-2 bg-[#3483fa] text-white text-[8px] sm:text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wide">Nuevo</span>` : '')}
             </div>
-            <div class="p-2.5 sm:p-5 lg:p-3.5 flex flex-col flex-1 ${sinStock ? 'opacity-60' : ''}">
-                <div class="flex items-center gap-1.5 sm:gap-2 lg:gap-1.5 mb-1.5 sm:mb-2 lg:mb-1 pr-2.5 py-0.5 sm:py-1 flex-shrink-0">
+            <div class="px-2.5 sm:px-3.5 pt-2 sm:pt-3 pb-3 sm:pb-4 flex flex-col flex-1 ${sinStock ? 'opacity-60' : ''}">
+                <div class="flex items-center gap-1.5 mb-1.5 flex-shrink-0">
                     ${avatarTienda}
-                    <span class="text-gray-500 text-[8px] sm:text-[10px] font-bold uppercase tracking-widest truncate flex-1">${escapeHtml(tienda)}</span>
+                    <span class="text-gray-500 text-[9px] sm:text-[11px] font-medium uppercase tracking-wide truncate">${escapeHtml(tienda)}</span>
                 </div>
-                <h3 class="font-black text-xs sm:text-lg lg:text-sm leading-snug group-hover:text-yellow-600 transition-colors min-h-[2.4em] sm:min-h-[2.6em] lg:min-h-[2.4em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
-                <span class="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5 sm:mt-1">${p.categorias ? escapeHtml(p.categorias.nombre) : 'General'}</span>
-                <div class="flex items-center justify-between mt-auto pt-2 sm:pt-4 lg:pt-2">
-                    <div class="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
-                        <span class="font-900 text-sm sm:text-xl lg:text-base">${formatoPrecio(p.precio)}</span>
+                <h3 class="font-normal text-gray-800 text-[13px] sm:text-base leading-snug group-hover:text-[#3483fa] transition-colors min-h-[2.4em] sm:min-h-[2.6em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
+
+                <div class="mt-2 sm:mt-3">
+                    ${descuentoPct > 0 ? `<div class="text-[11px] sm:text-xs text-gray-400 line-through leading-none">${formatoPrecio(p.precio_anterior)}</div>` : ''}
+                    <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap mt-0.5">
+                        <span class="font-medium text-gray-900 text-lg sm:text-2xl leading-none">${formatoPrecio(p.precio)}</span>
                         ${descuentoPct > 0 ? `
-                            <span class="text-[9px] sm:text-xs font-bold text-gray-400 line-through">${formatoPrecio(p.precio_anterior)}</span>
-                            <span class="text-[7px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-600 text-white">-${descuentoPct}% OFF</span>
+                            <span class="text-[10px] sm:text-xs font-semibold text-[#00a650]">${descuentoPct}% OFF</span>
                         ` : ''}
                     </div>
-                    <span class="w-7 h-7 sm:w-10 sm:h-10 lg:w-8 lg:h-8 rounded-full bg-black text-white flex items-center justify-center text-xs sm:text-sm group-hover:bg-yellow-400 group-hover:text-black transition-all active:scale-90 flex-shrink-0">→</span>
                 </div>
+
+                <span class="text-[9px] sm:text-[10px] font-medium text-gray-400 uppercase tracking-wide truncate mt-auto pt-2">${p.categorias ? escapeHtml(p.categorias.nombre) : 'General'}</span>
             </div>
         </div>
     `;
@@ -1905,8 +1906,15 @@ function renderDirectorioEmprendedores() {
         const bio = (e.bio || '').trim()
             ? escapeHtml(e.bio)
             : 'Este emprendedor todavía no cargó una descripción.';
+        // Va directo a la tienda del emprendedor: acá NO se abre el modal de
+        // perfil/elegir (ese solo se usa al clickear el logo en la fila de
+        // arriba, ver cargarEmprendedoresFila).
+        const slugTienda = e.usuarios && e.usuarios.usuario;
+        const hrefTienda = slugTienda
+            ? `emprendedor.html?t=${encodeURIComponent(slugTienda)}`
+            : `emprendedor.html?id=${encodeURIComponent(e.id)}`;
         return `
-            <button type="button" onclick="abrirPerfilEmprendedor('${e.id}')" class="group w-full sm:h-full flex flex-col text-left bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:border-black hover:shadow-xl transition-all active:scale-[0.99]">
+            <a href="${hrefTienda}" class="group w-full sm:h-full flex flex-col text-left bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:border-black hover:shadow-xl transition-all active:scale-[0.99]">
                 <div class="relative h-16 sm:h-32 flex-shrink-0 overflow-hidden bg-zinc-900">
                     <div class="absolute inset-0" style="background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1.5px, transparent 1.5px); background-size: 16px 16px;"></div>
                     ${banner}
@@ -1929,7 +1937,7 @@ function renderDirectorioEmprendedores() {
                         </div>
                     </div>
                 </div>
-            </button>
+            </a>
         `;
     }).join('');
 }
