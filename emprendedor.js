@@ -787,32 +787,33 @@ function crearCardHtmlProducto(p) {
         d: !!p.destacado, nv: esProductoNuevoVigente(p), act: sinStock ? false : true
     }));
     return `
-        <div class="group cursor-pointer h-full flex flex-col bg-white rounded-2xl sm:rounded-3xl lg:rounded-2xl border ${p.destacado ? 'border-yellow-400/90 ring-1 ring-yellow-400/50 shadow-lg shadow-yellow-400/10' : 'border-gray-100 shadow-sm'} hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden animate-fade-in" data-producto-id="${p.id}" data-hash="${hash}" onclick="verDetalles('${p.id}')">
-            <div class="relative aspect-[4/5] lg:aspect-[4/3] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center">
-                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-3 sm:p-5 lg:p-3.5 transition duration-300 ${sinStock ? 'grayscale opacity-50' : ''}" loading="lazy" decoding="async">
+        <div class="group cursor-pointer h-full flex flex-col bg-white rounded-md sm:rounded-lg border ${p.destacado ? 'border-yellow-400 ring-1 ring-yellow-400/40' : 'border-gray-200'} hover:shadow-[0_2px_12px_rgba(0,0,0,0.12)] hover:border-gray-300 transition-all duration-200 overflow-hidden animate-fade-in" data-producto-id="${p.id}" data-hash="${hash}" onclick="verDetalles('${p.id}')">
+            <div class="relative aspect-square overflow-hidden bg-white flex-shrink-0 flex items-center justify-center">
+                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-4 sm:p-6 lg:p-5 transition-transform duration-300 group-hover:scale-[1.03] ${sinStock ? 'grayscale opacity-50' : ''}" loading="lazy" decoding="async">
                 ${sinStock ? `
-                <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-gray-800 text-white text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Sin stock</span>`
+                <span class="absolute top-2 left-2 bg-gray-700 text-white text-[8px] sm:text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wide">Sin stock</span>`
                 : (esProductoNuevoVigente(p) ? `
-                <span class="absolute top-1.5 sm:top-3 lg:top-2 left-1.5 sm:left-3 lg:left-2 bg-yellow-400 text-black text-[7px] sm:text-[9px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow uppercase tracking-widest">Nuevo</span>` : '')}
+                <span class="absolute top-2 left-2 bg-[#3483fa] text-white text-[8px] sm:text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wide">Nuevo</span>` : '')}
                 ${p.destacado ? `
-                <span class="absolute top-1.5 sm:top-3 lg:top-2 right-1.5 sm:right-3 lg:right-2 flex items-center gap-1 bg-gradient-to-br from-yellow-300 to-yellow-500 text-black text-[7px] sm:text-[9px] font-black pl-1.5 pr-2 sm:pl-2 sm:pr-2.5 py-0.5 sm:py-1 rounded-full shadow-md shadow-yellow-500/40 uppercase tracking-widest">
-                    <svg class="w-2.5 h-2.5 sm:w-3 sm:h-3 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 15.8l-5.2 2.72.99-5.8-4.21-4.1 5.82-.85L12 2.5z"/></svg>
+                <span class="absolute top-2 right-2 flex items-center gap-1 bg-yellow-400 text-black text-[8px] sm:text-[9px] font-bold pl-1.5 pr-2 py-1 rounded uppercase tracking-wide">
+                    <svg class="w-2.5 h-2.5 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.6 5.27 5.82.85-4.21 4.1.99 5.8L12 15.8l-5.2 2.72.99-5.8-4.21-4.1 5.82-.85L12 2.5z"/></svg>
                     Destacado
                 </span>` : ''}
             </div>
-            <div class="p-2.5 sm:p-5 lg:p-3.5 flex flex-col flex-1 ${sinStock ? 'opacity-60' : ''}">
-                <h3 class="font-black text-xs sm:text-lg lg:text-sm leading-snug group-hover:text-yellow-600 transition-colors min-h-[2.4em] sm:min-h-[2.6em] lg:min-h-[2.4em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
-                <span class="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate mt-0.5 sm:mt-1">${p.categorias ? escapeHtml(p.categorias.nombre) : 'General'}</span>
-                <div class="flex items-center justify-between mt-auto pt-2 sm:pt-4 lg:pt-2">
-                    <div class="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
-                        <span class="font-900 text-sm sm:text-xl lg:text-base">${formatoPrecio(p.precio)}</span>
+            <div class="px-2.5 sm:px-3.5 pt-2 sm:pt-3 pb-3 sm:pb-4 flex flex-col flex-1 ${sinStock ? 'opacity-60' : ''}">
+                <h3 class="font-normal text-gray-800 text-[13px] sm:text-base leading-snug group-hover:text-[#3483fa] transition-colors min-h-[2.4em] sm:min-h-[2.6em] line-clamp-2">${escapeHtml(p.nombre)}</h3>
+
+                <div class="mt-2 sm:mt-3">
+                    ${descuentoPct > 0 ? `<div class="text-[11px] sm:text-xs text-gray-400 line-through leading-none">${formatoPrecio(p.precio_anterior)}</div>` : ''}
+                    <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap mt-0.5">
+                        <span class="font-medium text-gray-900 text-lg sm:text-2xl leading-none">${formatoPrecio(p.precio)}</span>
                         ${descuentoPct > 0 ? `
-                            <span class="text-[9px] sm:text-xs font-bold text-gray-400 line-through">${formatoPrecio(p.precio_anterior)}</span>
-                            <span class="text-[7px] sm:text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-600 text-white">-${descuentoPct}% OFF</span>
+                            <span class="text-[10px] sm:text-xs font-semibold text-[#00a650]">${descuentoPct}% OFF</span>
                         ` : ''}
                     </div>
-                    <span class="w-7 h-7 sm:w-10 sm:h-10 lg:w-8 lg:h-8 rounded-full bg-black text-white flex items-center justify-center text-xs sm:text-sm group-hover:bg-yellow-400 group-hover:text-black transition-all active:scale-90 flex-shrink-0">→</span>
                 </div>
+
+                <span class="text-[9px] sm:text-[10px] font-medium text-gray-400 uppercase tracking-wide truncate mt-auto pt-2">${p.categorias ? escapeHtml(p.categorias.nombre) : 'General'}</span>
             </div>
         </div>
     `;
