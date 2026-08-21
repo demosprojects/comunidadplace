@@ -14,11 +14,11 @@ var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // esta constante fija.
 //
 // >>> CUANDO TENGAS EL DOMINIO FINAL CONECTADO <<<
-// Cambiá SOLO el valor de acá abajo por "https://comunidademprendedora.com.ar"
+// Cambiá SOLO el valor de acá abajo por ""
 // (sin barra al final) y listo: todos los QR que se generen desde ese
 // momento van a apuntar al dominio nuevo. No hace falta tocar ningún
 // otro archivo.
-var SITIO_PUBLICO = "https://comunidadplace.pages.dev";
+var SITIO_PUBLICO = "https://comunidademprendedora.com.ar";
 
 const IMAGEN_PRODUCTO_DEFAULT = "https://res.cloudinary.com/dl2tftoum/image/upload/v1786256135/d5q4mgovgeaev2xkt3rq.webp";
 
