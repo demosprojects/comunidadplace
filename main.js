@@ -2540,9 +2540,23 @@ function mostrarToastCarrito(texto) {
 // abrir wa.me directo porque es difícil que el usuario tenga WhatsApp
 // abierto ahí; en ese caso mostramos un QR para escanear con el celular.
 function esDispositivoMobile() {
-    const uaMobile = /Android|iPhone|iPad|iPod|Windows Phone|Mobile/i.test(navigator.userAgent);
+    const ua = navigator.userAgent;
+    const uaMobile = /Android|iPhone|iPod|Windows Phone|Mobile/i.test(ua);
+
+    // iPadOS (13+) manda un user agent idéntico al de una Mac de escritorio
+    // ("Macintosh...", sin "iPad" ni "Mobile"), así que el chequeo de arriba
+    // no lo detecta. Se delata porque, a diferencia de una Mac real, tiene
+    // pantalla táctil (maxTouchPoints > 1). Cubrimos también el "iPad" viejo
+    // por las dudas (versiones de iPadOS/Safari que sí lo incluyen en la UA).
+    const esIPad = /iPad/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+
+    // Cualquier otra tablet/dispositivo con pantalla táctil como entrada
+    // principal (sin mouse), aunque su UA no traiga ninguna palabra clave.
+    const esTactilComoPrincipal = window.matchMedia('(pointer: coarse)').matches && navigator.maxTouchPoints > 0;
+
     const pantallaChica = window.matchMedia('(max-width: 767px)').matches;
-    return uaMobile || pantallaChica;
+
+    return uaMobile || esIPad || (esTactilComoPrincipal && pantallaChica);
 }
 
 // Vacía el carrito y cierra su drawer, dejando todo listo para una nueva
@@ -2581,7 +2595,7 @@ function mostrarModalQrPedido(telefono, mensaje) {
         cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
         return;
     }
-    QRCode.toCanvas(urlWaMe, { width: 260, margin: 1 }, (error, canvas) => {
+    QRCode.toCanvas(urlWaMe, { width: 260, margin: 1, errorCorrectionLevel: 'L' }, (error, canvas) => {
         if (error) {
             console.error('No se pudo generar el QR del pedido', error);
             cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
