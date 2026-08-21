@@ -2595,14 +2595,37 @@ function mostrarModalQrPedido(telefono, mensaje) {
         cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
         return;
     }
-    QRCode.toCanvas(urlWaMe, { width: 260, margin: 1, errorCorrectionLevel: 'L' }, (error, canvas) => {
-        if (error) {
-            console.error('No se pudo generar el QR del pedido', error);
-            cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
+
+    const opcionesQr = { margin: 1, errorCorrectionLevel: 'L' };
+
+    // Generamos el QR como SVG (texto vectorial) en vez de <canvas>: en
+    // algunas tablets Android con WebViews viejos o con la aceleración por
+    // hardware limitada, crear/dibujar sobre un <canvas> falla (por eso el
+    // QR nunca se veía ahí, aunque en PC funcionara perfecto). El SVG no
+    // depende del motor 2D del navegador, así que es mucho más compatible.
+    // Si por algo raro también fallara, probamos con canvas como respaldo.
+    QRCode.toString(urlWaMe, { ...opcionesQr, type: 'svg' }, (errorSvg, svg) => {
+        if (!errorSvg) {
+            cont.innerHTML = svg;
+            const svgEl = cont.querySelector('svg');
+            if (svgEl) {
+                svgEl.setAttribute('width', '260');
+                svgEl.setAttribute('height', '260');
+                svgEl.style.display = 'block';
+            }
             return;
         }
-        cont.innerHTML = '';
-        cont.appendChild(canvas);
+
+        console.error('No se pudo generar el QR como SVG, probando con canvas', errorSvg);
+        QRCode.toCanvas(urlWaMe, { width: 260, ...opcionesQr }, (errorCanvas, canvas) => {
+            if (errorCanvas) {
+                console.error('No se pudo generar el QR del pedido', errorCanvas);
+                cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
+                return;
+            }
+            cont.innerHTML = '';
+            cont.appendChild(canvas);
+        });
     });
 }
 
