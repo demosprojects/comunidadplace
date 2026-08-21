@@ -2937,6 +2937,12 @@ document.getElementById('form-postulacion').addEventListener('submit', async (e)
         return;
     }
 
+    if (!document.getElementById('post-terminos').checked) {
+        mostrarToast('Tenés que aceptar los términos y condiciones para enviar la postulación.', 'error');
+        document.getElementById('post-terminos').focus();
+        return;
+    }
+
     btn.disabled = true;
     btn.textContent = 'Enviando...';
 
