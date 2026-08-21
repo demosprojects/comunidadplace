@@ -668,7 +668,7 @@
                     <p id="modal-desc" class="text-gray-600 leading-relaxed text-sm">Descripción...</p>
                 </div>
 
-                <div class="pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-0 -mx-4 sm:mx-0 px-4 sm:px-0 sticky sm:static bottom-0 bg-white/95 sm:bg-transparent backdrop-blur sm:backdrop-blur-none border-t border-gray-100 sm:border-t-0 shadow-[0_-8px_20px_-6px_rgba(0,0,0,0.12)] sm:shadow-none">
+                <div class="pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-0 -mx-4 sm:mx-0 px-4 sm:px-0 sticky sm:static bottom-0 bg-white sm:bg-transparent border-t border-gray-100 sm:border-t-0 shadow-[0_-8px_20px_-6px_rgba(0,0,0,0.12)] sm:shadow-none">
                     <div class="flex items-center gap-3">
                         <div class="flex items-center gap-1.5 bg-gray-100 rounded-full px-1.5 py-1 flex-shrink-0">
                             <button onclick="modificarCantidadModal(-1)" class="w-8 h-8 rounded-full bg-white shadow font-black text-lg leading-none hover:bg-yellow-400 transition-all active:scale-90">−</button>
@@ -1150,6 +1150,19 @@
                         </div>
 
                         <input type="hidden" id="post-tipo" value="">
+
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3.5">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Antes de enviar</p>
+                            <ul class="text-[11px] text-gray-500 leading-relaxed space-y-1.5 list-disc pl-4">
+                                <li>Tus datos se usan únicamente para procesar esta solicitud de alta como emprendedor o comercio en Comunidad Place.</li>
+                                <li>No los transferimos a terceros ni los usamos para otro fin.</li>
+                                <li>Nos reservamos el derecho de aceptar o rechazar la postulación.</li>
+                            </ul>
+                            <label class="flex items-start gap-2.5 mt-3 pt-3 border-t border-gray-200 cursor-pointer select-none">
+                                <input type="checkbox" id="post-terminos" required class="mt-0.5 w-4 h-4 flex-shrink-0 rounded accent-black cursor-pointer">
+                                <span class="text-[11px] font-semibold text-gray-700 leading-snug">Leí y acepto estos términos.</span>
+                            </label>
+                        </div>
 
                         <button type="submit" id="btn-enviar-postulacion" class="w-full bg-black text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl mt-2">
                             Enviar postulación
