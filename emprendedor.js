@@ -114,6 +114,13 @@ async function cargarEmprendedor(slug, idLegacy, productoIdDesdeLink) {
         mostrarError();
         return;
     }
+    if (calcularEstadoAcceso(emprendedor).bloqueado) {
+        // Mes gratis/suscripción vencida sin pagar: la tienda no está
+        // bloqueada a mano por el admin (por eso pasó el .eq('activo',
+        // true) de arriba), pero tampoco tiene que verse públicamente.
+        mostrarError();
+        return;
+    }
 
     const id = emprendedor.id; // a partir de acá seguimos usando el UUID interno para el resto de las consultas
     emprendedorActual = emprendedor;
@@ -346,7 +353,11 @@ function iniciarRealtimeEmprendedor(id) {
 
     const refrescarPerfil = debounce(async () => {
         const { data, error } = await supabase.from('emprendedores').select('*').eq('id', id).eq('activo', true).single();
-        if (error || !data) {
+        // Bloqueada si: no existe / el admin la desactivó (ya cubierto por
+        // el .eq('activo', true) de arriba), o si venció el mes gratis/la
+        // suscripción sin pagar (calcularEstadoAcceso).
+        const bloqueadaPorPago = !error && data && calcularEstadoAcceso(data).bloqueado;
+        if (error || !data || bloqueadaPorPago) {
             if (!tiendaBloqueada) {
                 tiendaBloqueada = true;
                 mostrarError();
@@ -2029,12 +2040,14 @@ async function enviarPedidoWhatsapp() {
     const idsCarrito = carrito.items.map(i => i.productoId);
     const { data: vigentes, error: errorVigencia } = await supabase
         .from('productos')
-        .select('id, activo, emprendedores!inner(activo)')
+        .select('id, activo, emprendedores!inner(activo, created_at, suscripcion_estado, fecha_vencimiento_suscripcion)')
         .in('id', idsCarrito);
 
     if (!errorVigencia && vigentes) {
         const idsVigentes = new Set(
-            vigentes.filter(p => p.activo && p.emprendedores && p.emprendedores.activo).map(p => p.id)
+            vigentes
+                .filter(p => p.activo && p.emprendedores && !calcularEstadoAcceso(p.emprendedores).bloqueado)
+                .map(p => p.id)
         );
         const desactivadosAhora = carrito.items.filter(i => !idsVigentes.has(i.productoId));
         if (desactivadosAhora.length > 0) {
