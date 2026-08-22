@@ -298,12 +298,18 @@ function actualizarBotonLimpiarFiltros() {
 }
 
 async function cargarEmprendedoresFila() {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from('emprendedores')
-        .select('id, nombre_tienda, logo_url, banner_url, bio, medios_pago, usuarios(usuario)')
+        .select('id, nombre_tienda, logo_url, banner_url, bio, medios_pago, created_at, suscripcion_estado, fecha_vencimiento_suscripcion, usuarios(usuario)')
         .eq('activo', true)
         .order('nombre_tienda');
     if (error) { console.error(error); return; }
+
+    // El filtro de arriba (activo=true) sólo saca los bloqueos manuales
+    // del admin. Acá completamos el chequeo: si a una tienda se le venció
+    // el mes gratis o la suscripción sin pagar, tampoco se muestra en la
+    // vitrina pública (ver calcularEstadoAcceso en supabase-client.js).
+    data = (data || []).filter(e => !calcularEstadoAcceso(e).bloqueado);
 
     // Caché id -> datos del emprendedor, usada por el manejo de
     // Realtime de productos (armar el aviso de "producto nuevo de X" sin
@@ -392,15 +398,24 @@ function iniciarRealtime() {
 
         const nuevo = payload.new;
         const anterior = emprendedoresCache[nuevo.id];
-        const cambioVisibilidad = anterior && anterior.activo !== nuevo.activo;
-        const cambioNombreOLogo = !anterior || anterior.nombre_tienda !== nuevo.nombre_tienda || anterior.logo_url !== nuevo.logo_url;
+        // OJO: emprendedoresCache ahora sólo contiene tiendas visibles
+        // públicamente (cargarEmprendedoresFila ya descarta las bloqueadas
+        // por el admin Y las que vencieron su mes gratis/suscripción sin
+        // pagar). Por eso comparamos "visibilidad" en vez de solo
+        // "activo": una tienda puede pasar de invisible a visible (o al
+        // revés) sin que cambie el campo activo, por ejemplo si venció el
+        // plazo de la prueba gratis.
+        const estabaVisible = !!anterior;
+        const ahoraVisible = !calcularEstadoAcceso(nuevo).bloqueado;
+        const cambioVisibilidad = estabaVisible !== ahoraVisible;
+        const cambioNombreOLogo = anterior && (anterior.nombre_tienda !== nuevo.nombre_tienda || anterior.logo_url !== nuevo.logo_url);
 
         // Liviano: refrescar la fila de logos y el panel de filtro no cuesta nada.
         await cargarEmprendedoresFila();
 
         if (cambioVisibilidad) {
-            // Se bloqueó o reactivó la tienda: cambia qué productos entran
-            // en el catálogo (el select filtra por emprendedores.activo).
+            // Se bloqueó/reactivó la tienda o venció/se renovó su
+            // suscripción: cambia qué productos entran en el catálogo.
             await cargarProductos();
             aplicarFiltros();
             sincronizarDisponibilidadCarrito();
@@ -802,7 +817,7 @@ async function incorporarProductosNuevosPendientes(ids) {
 
     const { data, error } = await supabase
         .from('productos')
-        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago, costo_envio, usuarios(usuario))')
+        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago, costo_envio, created_at, suscripcion_estado, fecha_vencimiento_suscripcion, usuarios(usuario))')
         .in('id', ids)
         .eq('activo', true)
         .eq('emprendedores.activo', true);
@@ -813,10 +828,15 @@ async function incorporarProductosNuevosPendientes(ids) {
         return;
     }
 
-    data.forEach(p => {
-        normalizarProducto(p);
-        if (!productos.some(existente => String(existente.id) === String(p.id))) productos.push(p);
-    });
+    // Igual que en cargarProductos(): el filtro de la consulta sólo saca
+    // el bloqueo manual del admin, acá sumamos el chequeo de mes
+    // gratis/suscripción vencida.
+    data
+        .filter(p => p.emprendedores && !calcularEstadoAcceso(p.emprendedores).bloqueado)
+        .forEach(p => {
+            normalizarProducto(p);
+            if (!productos.some(existente => String(existente.id) === String(p.id))) productos.push(p);
+        });
     precargarImagenesProductos();
     aplicarFiltros();
 }
@@ -888,7 +908,7 @@ async function cargarProductos() {
 
     const { data, error } = await supabase
         .from('productos')
-        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago, costo_envio, usuarios(usuario))')
+        .select('*, categorias(id, nombre), emprendedores!inner(id, nombre_tienda, whatsapp, activo, logo_url, banner_url, bio, ubicacion, mapa_url, horario_atencion, instagram, facebook, tiktok, medios_pago, costo_envio, created_at, suscripcion_estado, fecha_vencimiento_suscripcion, usuarios(usuario))')
         .eq('emprendedores.activo', true)
         .order('created_at', { ascending: false });
 
@@ -903,7 +923,13 @@ async function cargarProductos() {
             `<p class="col-span-full text-center py-10 text-red-400 italic">No se pudieron cargar los productos. Revisá la conexión con Supabase.</p>`;
         return;
     }
-    productos = data.map(normalizarProducto);
+    // El filtro de la consulta (emprendedores.activo) sólo saca las
+    // tiendas bloqueadas a mano por el admin. Sumamos acá el chequeo de
+    // calcularEstadoAcceso: si el mes gratis o la suscripción vencieron
+    // sin pagar, sus productos tampoco entran al catálogo público.
+    productos = data
+        .filter(p => p.emprendedores && !calcularEstadoAcceso(p.emprendedores).bloqueado)
+        .map(normalizarProducto);
     precargarImagenesProductos();
 }
 
@@ -1978,6 +2004,7 @@ async function abrirPerfilEmprendedor(emprendedorId) {
             .eq('activo', true)
             .single();
         if (error || !data) return;
+        if (calcularEstadoAcceso(data).bloqueado) return; // mes gratis/suscripción vencida
         e = data;
     }
 
@@ -2712,12 +2739,14 @@ async function enviarPedidoWhatsapp() {
     const idsCarrito = carrito.items.map(i => i.productoId);
     const { data: vigentes, error: errorVigencia } = await supabase
         .from('productos')
-        .select('id, activo, emprendedores!inner(activo)')
+        .select('id, activo, emprendedores!inner(activo, created_at, suscripcion_estado, fecha_vencimiento_suscripcion)')
         .in('id', idsCarrito);
 
     if (!errorVigencia && vigentes) {
         const idsVigentes = new Set(
-            vigentes.filter(p => p.activo && p.emprendedores && p.emprendedores.activo).map(p => p.id)
+            vigentes
+                .filter(p => p.activo && p.emprendedores && !calcularEstadoAcceso(p.emprendedores).bloqueado)
+                .map(p => p.id)
         );
         const desactivadosAhora = carrito.items.filter(i => !idsVigentes.has(i.productoId));
         if (desactivadosAhora.length > 0) {
