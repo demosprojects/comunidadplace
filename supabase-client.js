@@ -274,6 +274,50 @@ function suscribirTabla(tabla, callback, filtro) {
 
 
 // ------------------------------------------------------------
+// ACCESO / PAYWALL: calcula si a un emprendedor hay que mostrarle el
+// splash de bloqueo (sin salida salvo pagar o cerrar sesión).
+//
+// Se bloquea por dos motivos posibles:
+//   1) "admin"  -> el equipo lo bloqueó a mano (activo === false).
+//   2) "pago"   -> no tiene una suscripción "authorized" (pagando al
+//      día) y ya venció el plazo: la fecha de vencimiento guardada
+//      (prueba gratis, pago rechazado, etc.), o si esa fecha nunca se
+//      cargó, 30 días desde la creación de la cuenta.
+// ------------------------------------------------------------
+const DIAS_PRUEBA_GRATIS = 30;
+
+function calcularEstadoAcceso(emprendedor) {
+    if (!emprendedor) return { bloqueado: false };
+
+    if (emprendedor.activo === false) {
+        return {
+            bloqueado: true,
+            motivo: 'admin',
+            mensaje: emprendedor.motivo_bloqueo || 'Tu cuenta fue bloqueada por el equipo de la comunidad.',
+        };
+    }
+
+    const estado = emprendedor.suscripcion_estado || 'sin_suscripcion';
+    if (estado === 'authorized') return { bloqueado: false };
+
+    let vencimiento = emprendedor.fecha_vencimiento_suscripcion
+        ? new Date(emprendedor.fecha_vencimiento_suscripcion)
+        : null;
+
+    // Nunca se activó ninguna prueba/suscripción -> el límite es
+    // 30 días desde que se creó la cuenta.
+    if (!vencimiento && emprendedor.created_at) {
+        vencimiento = new Date(new Date(emprendedor.created_at).getTime() + DIAS_PRUEBA_GRATIS * 24 * 60 * 60 * 1000);
+    }
+
+    if (vencimiento && Date.now() > vencimiento.getTime()) {
+        return { bloqueado: true, motivo: 'pago', vencimiento };
+    }
+
+    return { bloqueado: false };
+}
+
+// ------------------------------------------------------------
 // PRODUCTO "NUEVO": se marca a mano al cargar/editar el producto
 // (no es automático por fecha de creación), pero para que nadie
 // se olvide de sacarlo, deja de mostrarse solo a los 5 días de
