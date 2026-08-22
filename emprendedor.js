@@ -509,7 +509,7 @@ function mostrarError() {
 // RENDER DEL PERFIL (Optimizado para el nuevo diseño)
 // ============================================================
 function renderPerfil(e) {
-    document.title = `${e.nombre_tienda || 'Emprendedor'} | Comunidad Place`;
+    document.title = `${e.nombre_tienda || 'Emprendedor'} | Comunidad Online`;
 
     // Barra de anuncio temporal
     const anuncioWrap = document.getElementById('perfil-anuncio-wrap');
@@ -595,7 +595,7 @@ function renderPerfil(e) {
 
     const btnWsp = document.getElementById('perfil-whatsapp');
     if (e.whatsapp) {
-        const msg = `Hola ${e.nombre_tienda}, te encontré en ComunidadPlace!`;
+        const msg = `Hola ${e.nombre_tienda}, te encontré en Comunidad Emprendedora Tienda Online!`;
         btnWsp.href = `https://wa.me/${e.whatsapp}?text=${encodeURIComponent(msg)}`;
         btnWsp.classList.remove('opacity-40', 'pointer-events-none');
     } else {
@@ -1082,7 +1082,7 @@ function actualizarPrecioYWhatsapp() {
 
     const tienda = p.emprendedores ? p.emprendedores.nombre_tienda : '';
     const whatsapp = p.emprendedores ? p.emprendedores.whatsapp : '';
-    let msg = `Hola ${tienda}, vi tu producto "${p.nombre}" en ComunidadPlace y quiero más info!`;
+    let msg = `Hola ${tienda}, vi tu producto "${p.nombre}" en Comunidad Emprendedora Tienda Online y quiero más info!`;
     if (detalleVariantes) msg += ` (${detalleVariantes})`;
 
     const linkWhatsapp = document.getElementById('modal-whatsapp');
@@ -2072,7 +2072,7 @@ async function enviarPedidoWhatsapp() {
 
     const quiereEnvioMsg = carrito.envioSeleccionado !== false;
 
-    let msg = `Hola ${carrito.emprendedorNombre}! Quiero hacer este pedido desde ComunidadPlace:\n\n`;
+    let msg = `Hola ${carrito.emprendedorNombre}! Quiero hacer este pedido desde Comunidad Emprendedora Tienda Online:\n\n`;
     if (carrito.costoEnvio > 0) {
         msg += `Modalidad de entrega: ${quiereEnvioMsg ? 'Envío a domicilio' : 'Retiro en el local'}\n\n`;
     }
