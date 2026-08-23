@@ -198,15 +198,16 @@ const ICONO_SVG_MANOS =
 const ICONO_SVG_TARJETA =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>';
 
+// Ícono genérico de "tres puntos" para la opción Otro
+const ICONO_SVG_OTRO =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>';
+
 const MEDIOS_PAGO = [
-    { id: 'transferencia', label: 'Transferencia',       icon: ICONO_SVG_MANOS },
-     { id: 'mercadopago',   label: 'Mercado Pago',        icon: ICONO_SVG_TARJETA },
-     { id: 'debito',        label: 'Tarjeta de débito',   icon: ICONO_SVG_TARJETA },
-    { id: 'credito',       label: 'Tarjeta de crédito',  icon: ICONO_SVG_TARJETA },
-    { id: 'efectivo',      label: 'Efectivo',            icon: ICONO_SVG_BILLETES },
-    
-   
-    
+    { id: 'transferencia', label: 'Transferencia',      icon: ICONO_SVG_MANOS },
+    { id: 'debito',        label: 'Tarjeta de débito',  icon: ICONO_SVG_TARJETA },
+    { id: 'credito',       label: 'Tarjeta de crédito', icon: ICONO_SVG_TARJETA },
+    { id: 'efectivo',      label: 'Efectivo',           icon: ICONO_SVG_BILLETES },
+    { id: 'otro',          label: 'Otro',               icon: ICONO_SVG_OTRO },
 ];
 
 function nombreMedioPago(id) {
@@ -286,6 +287,15 @@ function suscribirTabla(tabla, callback, filtro) {
 // ------------------------------------------------------------
 const DIAS_PRUEBA_GRATIS = 30;
 
+// Únicos valores de "suscripcion_estado" que indican que alguna vez hubo
+// un intento real de suscripción en MercadoPago (se generó, quedó
+// pendiente, se rechazó un cobro, se canceló o se pausó). Cualquier otro
+// valor -incluido 'sin_suscripcion', 'vencida' como default de la
+// columna, vacío, etc.- significa que la cuenta todavía no pasó por MP y
+// puede seguir dentro de su mes gratis, sin importar qué fecha haya
+// quedado guardada en "fecha_vencimiento_suscripcion".
+const ESTADOS_SUSCRIPCION_REAL = ['authorized', 'pending', 'pago_rechazado', 'cancelled', 'paused'];
+
 function calcularEstadoAcceso(emprendedor) {
     if (!emprendedor) return { bloqueado: false };
 
@@ -300,6 +310,8 @@ function calcularEstadoAcceso(emprendedor) {
     const estado = emprendedor.suscripcion_estado || 'sin_suscripcion';
     if (estado === 'authorized') return { bloqueado: false };
 
+    const enPruebaGratis = !ESTADOS_SUSCRIPCION_REAL.includes(estado);
+
     let vencimiento = emprendedor.fecha_vencimiento_suscripcion
         ? new Date(emprendedor.fecha_vencimiento_suscripcion)
         : null;
@@ -311,10 +323,10 @@ function calcularEstadoAcceso(emprendedor) {
     }
 
     if (vencimiento && Date.now() > vencimiento.getTime()) {
-        return { bloqueado: true, motivo: 'pago', vencimiento };
+        return { bloqueado: true, motivo: 'pago', vencimiento, enPruebaGratis };
     }
 
-    return { bloqueado: false };
+    return { bloqueado: false, enPruebaGratis, vencimiento };
 }
 
 // ------------------------------------------------------------
