@@ -333,7 +333,22 @@ async function cargarEmprendedoresFila() {
     // --- Fila de logos debajo del banner (abre el perfil del emprendedor) ---
     const cont = document.getElementById('emprendedores-fila');
     if (cont) {
-        cont.innerHTML = data.length === 0 ? '' : data.map(e => {
+        cont.innerHTML = data.length === 0 ? `
+            <div class="w-full flex items-center gap-3 py-2 px-1">
+                <span class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-yellow-50 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="font-black text-xs sm:text-sm uppercase tracking-widest">Todavía no hay emprendedores</p>
+                    <p class="text-gray-400 text-[11px] sm:text-xs mt-0.5">¡Sé el primero en sumar tu emprendimiento a la comunidad!</p>
+                </div>
+                <button type="button" onclick="abrirModalPostulacion()" class="ml-auto flex-shrink-0 hidden sm:inline-flex items-center gap-1.5 bg-black text-white px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95">
+                    Quiero vender
+                </button>
+            </div>
+        ` : data.map(e => {
             const inicial = e.nombre_tienda ? e.nombre_tienda.charAt(0).toUpperCase() : '?';
             const avatar = e.logo_url
                 ? `<img src="${e.logo_url}" alt="${escapeHtml(e.nombre_tienda)}" class="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover ring-2 ring-gray-100 group-hover:ring-yellow-400 transition-all">`
@@ -1019,6 +1034,35 @@ function mostrarProductos(lista) {
 
     if (lista.length === 0) {
         contenedor.dataset.vacio = '1';
+
+        // Dos escenarios muy distintos comparten "lista vacía", y merecen
+        // avisos distintos:
+        //  1) Catálogo realmente vacío (todavía no hay productos cargados
+        //     en toda la web, sin importar filtros): no tiene sentido
+        //     mostrar un ícono de "búsqueda sin resultados" ni un botón
+        //     de "limpiar filtros" que no cambia nada. Mostramos un aviso
+        //     de bienvenida/expectativa, para llamar la atención en lugar
+        //     de parecer un error.
+        //  2) Hay productos en la web, pero los filtros/búsqueda activos
+        //     no matchean ninguno: ahí sí tiene sentido el aviso de "sin
+        //     resultados" + limpiar filtros.
+        const idsPendientes = new Set(productosNuevosPendientes.map(p => String(p.id)));
+        const hayProductosEnLaWeb = productos.some(p => !idsPendientes.has(String(p.id)));
+
+        if (!hayProductosEnLaWeb) {
+            contenedor.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center text-center py-20">
+                    <span class="w-16 h-16 rounded-full bg-yellow-50 flex items-center justify-center mb-5">
+                        <svg class="w-7 h-7 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25v3M14 11.25v3M3.375 7.5h17.25M8.25 7.5V6a2.25 2.25 0 012.25-2.25h3A2.25 2.25 0 0115.75 6v1.5" />
+                        </svg>
+                    </span>
+                    <p class="font-black text-sm uppercase tracking-widest">Sin productos por ahora</p>
+                    <p class="text-gray-400 text-xs mt-1.5 max-w-[16rem]">Nuestros emprendedores están armando su catálogo. ¡Muy pronto vas a encontrar productos acá!</p>
+                </div>`;
+            return;
+        }
+
         contenedor.innerHTML = `
             <div class="col-span-full flex flex-col items-center justify-center text-center py-20">
                 <span class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-5">
