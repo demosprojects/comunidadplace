@@ -777,7 +777,7 @@ function mostrarAvisoProductosNuevos() {
         : `<button onclick="verNovedadesProductos()" class="w-full sm:w-auto text-center bg-black text-white px-4 py-2 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 whitespace-nowrap">Ver novedades</button>`;
 
     el.innerHTML = `
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 pr-9 sm:pr-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 pr-10 sm:pr-12">
             <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                 <span class="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center">
                     <svg class="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2590,9 +2590,21 @@ async function refrescarPreciosCarritoDesdeServidor() {
 }
 
 function cerrarCarrito() {
+    ocultarCarritoVisualmente();
+    desbloquearScrollBody();
+}
+
+// Muestra/oculta el carrito solo a nivel visual (clases), sin tocar el
+// contador de bloqueo de scroll. Se usa para poder tapar el carrito detrás
+// del modal de QR sin desincronizar bloquearScrollBody()/desbloquearScrollBody().
+function ocultarCarritoVisualmente() {
     document.getElementById('carrito-overlay').classList.add('hidden');
     document.getElementById('carrito-drawer').classList.add('translate-x-full');
-    desbloquearScrollBody();
+}
+
+function mostrarCarritoVisualmente() {
+    document.getElementById('carrito-overlay').classList.remove('hidden');
+    document.getElementById('carrito-drawer').classList.remove('translate-x-full');
 }
 
 function mostrarToastCarrito(texto) {
@@ -2658,6 +2670,18 @@ function mostrarModalQrPedido(telefono, mensaje) {
             <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Cargando QR...</span>
         </div>
     `;
+
+    // El modal de QR se abre siempre desde el carrito, que ya está abierto
+    // (y ya bloqueó el scroll) atrás. Antes acá quedaban DOS overlays
+    // semitransparentes superpuestos (el del carrito + el del QR), cada uno
+    // haciendo blending en vivo sobre el contenido de atrás (que tiene
+    // animaciones corriendo, como los skeletons con shimmer): eso es lo que
+    // generaba el lag al abrir/mover el modal en PC. Ocultamos el carrito
+    // SOLO visualmente (sin tocar el contador de bloqueo de scroll, que
+    // sigue representando que "algo" sigue abierto) para que quede un único
+    // overlay en pantalla.
+    ocultarCarritoVisualmente();
+
     document.getElementById('modal-qr-pedido').classList.remove('hidden');
     bloquearScrollBody();
 
@@ -2736,7 +2760,7 @@ function cerrarModalQrPedido() {
     document.getElementById('modal-qr-pedido').classList.add('hidden');
     desbloquearScrollBody();
     _qrPedidoUrlWhatsappWeb = null;
-    finalizarPedido();
+    finalizarPedido(); // finalizarPedido() -> cerrarCarrito() se encarga de ocultar el carrito y liberar su propio bloqueo de scroll.
 }
 
 // Botón "Ya envié el pedido" dentro del modal de QR.
@@ -2752,9 +2776,22 @@ function confirmarPedidoEnviadoDesdeQr() {
 // Al tocar "Enviar pedido" de nuevo, se genera un QR nuevo con todo incluido.
 function volverAlCarritoDesdeQr() {
     document.getElementById('modal-qr-pedido').classList.add('hidden');
+    // Este desbloquearScrollBody() libera SOLO el bloqueo que agregó el modal
+    // de QR. El del carrito (que nunca se cerró, solo se ocultó visualmente
+    // en mostrarModalQrPedido) sigue en pie, así que NO hay que volver a
+    // llamar bloquearScrollBody() acá.
     desbloquearScrollBody();
     _qrPedidoUrlWhatsappWeb = null;
-    abrirCarrito();
+
+    // En vez de abrirCarrito() (que volvería a bloquear el scroll y
+    // desincronizaría el contador contra el desbloquearScrollBody() de
+    // arriba, dejando el scroll trabado para siempre después de cerrar el
+    // carrito), mostramos el carrito de nuevo y refrescamos sus datos "a
+    // mano", sin tocar el bloqueo de scroll.
+    mostrarCarritoVisualmente();
+    sincronizarDisponibilidadCarrito();
+    renderCarrito();
+    refrescarPreciosCarritoDesdeServidor();
 }
 
 // Arma el mensaje con el detalle del pedido y abre WhatsApp directo al
