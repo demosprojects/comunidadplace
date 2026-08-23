@@ -391,7 +391,14 @@ function debounce(fn, espera = 350) {
 
         .cp-confirm-overlay {
             position: fixed; inset: 0; z-index: 9998;
-            background: rgba(11,12,16,0.7); backdrop-filter: blur(6px);
+            /* Antes tenía backdrop-filter: blur(6px), que obliga al navegador a
+               recalcular en vivo, frame a frame, el desenfoque de TODO lo que
+               queda atrás (que acá encima es el modal de QR ya abierto): eso
+               era el lag/"fondo que se transparenta en vivo". Lo sacamos y
+               dejamos un fondo semitransparente plano, igual que el resto de
+               los modales del sitio (que usan bg-black/85 sin blur): un solo
+               blend, sin recálculo continuo. */
+            background: rgba(0,0,0,0.85);
             display: flex; align-items: center; justify-content: center;
             padding: 1rem; animation: cp-fade-in 0.2s ease;
         }
