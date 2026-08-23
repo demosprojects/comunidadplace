@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#0a1128">
-    <title>Verificación de Credencial | Comunidad Place</title>
+    <meta name="theme-color" content="#0b0c10">
+    <title>Verificación de Credencial | Comunidad Online</title>
     <link rel="shortcut icon" href="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp">
     
     <!-- Tipografía acorde a la web -->
@@ -23,8 +23,7 @@
                     },
                     colors: {
                         obsidian: '#0b0c10',
-                        deepblue: '#0a1128',
-                        skyaccent: '#3b82f6',
+                        goldaccent: '#facc15',
                     }
                 }
             }
@@ -37,14 +36,14 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
 
-        /* Fondo azul moderno: degradado profundo + resplandores + textura sutil */
+        /* Fondo negro moderno: degradado profundo + resplandores amarillos + textura sutil */
         .bg-app {
-            background-color: #060a1a;
+            background-color: #0b0c10;
             background-image:
-                radial-gradient(circle at 15% 8%, rgba(56, 189, 248, 0.22), transparent 45%),
-                radial-gradient(circle at 88% 18%, rgba(99, 102, 241, 0.20), transparent 50%),
-                radial-gradient(circle at 50% 100%, rgba(30, 64, 175, 0.35), transparent 60%),
-                linear-gradient(160deg, #05070f 0%, #0a1128 45%, #060913 100%);
+                radial-gradient(circle at 15% 8%, rgba(250, 204, 21, 0.18), transparent 45%),
+                radial-gradient(circle at 88% 18%, rgba(250, 204, 21, 0.12), transparent 50%),
+                radial-gradient(circle at 50% 100%, rgba(250, 204, 21, 0.10), transparent 60%),
+                linear-gradient(160deg, #05070f 0%, #0b0c10 45%, #060913 100%);
             position: relative;
             overflow-x: hidden;
         }
@@ -76,13 +75,9 @@
 
     <!-- Marca / Header minimalista -->
     <div class="mb-6 sm:mb-8 text-center animate-fade-in">
-        <div class="w-11 h-11 sm:w-12 sm:h-12 mx-auto bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-400/30 mb-3">
-            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
-            </svg>
-        </div>
-        <span class="block text-[10px] font-black tracking-[0.25em] text-sky-300 uppercase">Comunidad</span>
-        <span class="block text-xl font-900 tracking-wide uppercase text-white -mt-0.5">Place</span>
+        <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp" alt="Comunidad Emprendedora Tienda Online" class="w-11 h-11 sm:w-12 sm:h-12 mx-auto object-contain mb-3">
+        <span class="block text-[10px] font-black tracking-[0.25em] text-yellow-400 uppercase">Comunidad Emprendedora</span>
+        <span class="block text-xl font-900 tracking-wide uppercase text-white -mt-0.5">Online</span>
     </div>
 
     <!-- Contenedor Principal (Tarjeta) -->
@@ -90,7 +85,7 @@
         
         <!-- ESTADO 1: Cargando -->
         <div id="estado-cargando" class="flex flex-col items-center justify-center py-14 sm:py-16 px-5 sm:px-6">
-            <svg class="w-10 h-10 animate-spin text-sky-500 mb-4" fill="none" viewBox="0 0 24 24">
+            <svg class="w-10 h-10 animate-spin text-yellow-500 mb-4" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -125,7 +120,7 @@
                 <div class="h-px w-full bg-gray-200"></div>
                 <div class="flex items-center gap-3">
                     <img id="data-logo" src="" class="w-10 h-10 shrink-0 rounded-lg object-cover bg-white border border-gray-200 hidden">
-                    <div id="data-logo-fallback" class="w-10 h-10 shrink-0 rounded-lg bg-deepblue text-white flex items-center justify-center font-black hidden">?</div>
+                    <div id="data-logo-fallback" class="w-10 h-10 shrink-0 rounded-lg bg-obsidian text-white flex items-center justify-center font-black hidden">?</div>
                     <div class="min-w-0">
                         <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Emprendimiento</p>
                         <p id="data-negocio" class="text-sm font-bold text-obsidian break-words">Cargando...</p>
