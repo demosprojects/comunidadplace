@@ -475,14 +475,18 @@
             </div>
 
             <!-- Estado: Error / No encontrado -->
-            <div id="perfil-error" class="hidden text-center py-16">
-                <svg class="w-12 h-12 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-                    <circle cx="10.5" cy="10.5" r="6.5"/>
-                    <path stroke-linecap="round" d="M20 20l-4.8-4.8"/>
-                </svg>
-                <h1 class="text-2xl sm:text-3xl font-900 uppercase italic mt-4">No encontramos este emprendedor</h1>
-                <p class="text-gray-500 mt-2 text-sm sm:text-base">Puede que el link esté roto o la tienda ya no se encuentre activa en la comunidad.</p>
-                <a href="index.html" class="inline-block mt-6 bg-black text-white px-8 py-4 rounded-full font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl">
+            <div id="perfil-error" class="hidden min-h-[50vh] sm:min-h-[55vh] flex flex-col items-center justify-center text-center px-4 py-16">
+                <span class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-100 flex items-center justify-center mb-6">
+                    <svg class="w-7 h-7 sm:w-8 sm:h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9.75l1.264-4.42A2.25 2.25 0 016.427 3.6h11.146a2.25 2.25 0 012.163 1.73L21 9.75M3 9.75v8.55A1.7 1.7 0 004.7 20h14.6a1.7 1.7 0 001.7-1.7V9.75M3 9.75h18" />
+                        <path stroke-linecap="round" d="M15 20v-4.5a1.5 1.5 0 00-1.5-1.5h-3A1.5 1.5 0 009 15.5V20" />
+                        <path stroke-linecap="round" d="M19.5 19.5l-15-15" />
+                    </svg>
+                </span>
+                <h1 class="text-xl sm:text-2xl font-900 uppercase italic">No encontramos este emprendedor</h1>
+                <p class="text-gray-400 mt-2.5 text-sm max-w-xs">Puede que el link esté roto o la tienda ya no se encuentre activa en la comunidad.</p>
+                <a href="index.html" class="inline-flex items-center gap-2 mt-7 bg-black text-white px-7 py-3.5 rounded-full font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
                     Volver al catálogo general
                 </a>
             </div>
@@ -985,10 +989,10 @@
     </button>
 
     <!-- MODAL POSTULACIÓN: "Quiero vender" (emprendedores y comercios) -->
-    <div id="modal-postulacion" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+    <div id="modal-postulacion" class="fixed inset-0 z-[100] hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="absolute inset-0 bg-black/85" onclick="cerrarModalPostulacion()"></div>
 
-        <div class="cp-postmodal bg-white w-full max-w-[440px] rounded-[28px] relative z-10 shadow-2xl animate-fade-in max-h-[90vh] flex flex-col overflow-hidden">
+        <div class="cp-postmodal bg-white w-full max-w-[480px] rounded-t-[28px] sm:rounded-[28px] relative z-10 shadow-2xl animate-fade-in max-h-[92vh] max-h-[92dvh] flex flex-col overflow-hidden">
 
             <div class="cp-postmodal__header flex items-start justify-between gap-3 px-6 sm:px-7 pt-6 pb-5 flex-shrink-0">
                 <div class="min-w-0 flex-1">
