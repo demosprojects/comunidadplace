@@ -502,6 +502,12 @@ function mostrarError() {
     document.getElementById('perfil-contenido').classList.add('hidden');
     document.getElementById('seccion-productos').classList.add('hidden');
     document.getElementById('perfil-banner-wrap').classList.add('hidden');
+    // El patrón de puntos también se oculta acá: con el cartel de error ya
+    // ocupando su propio alto (min-h), dejar el patrón arriba sumaba un
+    // bloque decorativo de más que no aportaba nada y hacía ver la pantalla
+    // como dos secciones pegadas sin razón.
+    const fondoPatron = document.getElementById('perfil-fondo-patron');
+    if (fondoPatron) fondoPatron.classList.add('hidden');
     document.getElementById('perfil-error').classList.remove('hidden');
 }
 
