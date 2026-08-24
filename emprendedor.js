@@ -530,22 +530,26 @@ function renderPerfil(e) {
     }
 
     const logo = document.getElementById('perfil-logo');
+    const logoWrap = document.getElementById('perfil-logo-wrap');
     const placeholder = document.getElementById('perfil-logo-placeholder');
     if (e.logo_url) {
         logo.src = e.logo_url;
-        logo.classList.remove('hidden');
+        if (logoWrap) logoWrap.classList.remove('hidden');
         placeholder.classList.add('hidden');
     } else {
         placeholder.textContent = (e.nombre_tienda || '?').charAt(0).toUpperCase();
         placeholder.classList.remove('hidden');
-        logo.classList.add('hidden');
+        if (logoWrap) logoWrap.classList.add('hidden');
+        logo.removeAttribute('src');
     }
 
     // Manejo inteligente del Banner de Portada vs Patrón
     const bannerWrap = document.getElementById('perfil-banner-wrap');
     const fondoPatron = document.getElementById('perfil-fondo-patron');
+    const banner = document.getElementById('perfil-banner');
     if (e.banner_url) {
-        document.getElementById('perfil-banner').src = e.banner_url;
+        banner.src = e.banner_url;
+        banner.alt = 'Portada de ' + (e.nombre_tienda || 'la tienda');
         bannerWrap.classList.remove('hidden');
         if (fondoPatron) fondoPatron.classList.add('hidden');
     } else {
@@ -1180,16 +1184,35 @@ let _lbUltimoTapHora = 0;
 let _lbUltimoTapPos = null;
 let _lbTapTimeoutId = null;
 
-function abrirLightboxImagen() {
-    const p = productoModalActual;
-    if (!p || !p.imagen_url) return;
+function abrirLightboxLogoPerfil() {
+    const e = emprendedorActual;
+    if (!e || !e.logo_url) return;
+    abrirLightboxImagen(e.logo_url, e.nombre_tienda || 'Logo');
+}
+
+function abrirLightboxBannerPerfil() {
+    const e = emprendedorActual;
+    if (!e || !e.banner_url) return;
+    abrirLightboxImagen(e.banner_url, e.nombre_tienda || 'Portada');
+}
+
+function abrirLightboxImagen(src, titulo) {
+    if (!src) {
+        const p = productoModalActual;
+        if (!p || !p.imagen_url) return;
+        src = p.imagen_url;
+        titulo = p.nombre || '';
+    }
 
     const lightbox = document.getElementById('lightbox-imagen');
     const overlay = document.getElementById('lightbox-imagen-overlay');
     const img = document.getElementById('lightbox-imagen-img');
 
-    img.src = p.imagen_url;
-    img.alt = p.nombre || '';
+    img.src = src;
+    img.alt = titulo || '';
+    const tituloEl = document.getElementById('lightbox-imagen-titulo');
+    if (tituloEl) tituloEl.textContent = titulo || '';
+    lightbox.classList.toggle('lightbox-modo-portada', !!(emprendedorActual && src === emprendedorActual.banner_url));
 
     _lbReiniciarEstadoZoom();
 
@@ -1199,6 +1222,7 @@ function abrirLightboxImagen() {
 
     // Forzamos reflow para que la transición de entrada se dispare
     requestAnimationFrame(() => {
+        lightbox.classList.add('abierto');
         overlay.classList.add('abierto');
         img.classList.add('abierto');
     });
@@ -1213,6 +1237,7 @@ function cerrarLightboxImagen() {
 
     overlay.classList.remove('abierto');
     img.classList.remove('abierto');
+    lightbox.classList.remove('abierto');
 
     desbloquearScrollBody();
     document.removeEventListener('keydown', _cerrarLightboxImagenConEsc);
@@ -1221,8 +1246,9 @@ function cerrarLightboxImagen() {
     setTimeout(() => {
         lightbox.classList.add('hidden');
         lightbox.classList.remove('flex');
+        lightbox.classList.remove('lightbox-modo-portada');
         img.src = '';
-    }, 300);
+    }, 400);
 }
 
 function _cerrarLightboxImagenConEsc(e) {
@@ -1275,6 +1301,7 @@ function _lbActualizarBotonReset() {
     const btn = document.getElementById('lightbox-zoom-reset');
     if (!btn) return;
     const enEscalaBase = _lbEscala <= 1.01;
+    btn.textContent = Math.round(_lbEscala * 100) + '%';
     btn.classList.toggle('opacity-40', enEscalaBase);
     btn.classList.toggle('pointer-events-none', enEscalaBase);
 }
