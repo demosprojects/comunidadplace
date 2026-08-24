@@ -1593,6 +1593,8 @@ function abrirLightboxImagen() {
 
     img.src = p.imagen_url;
     img.alt = p.nombre || '';
+    const titulo = document.getElementById('lightbox-imagen-titulo');
+    if (titulo) titulo.textContent = p.nombre || '';
 
     _lbReiniciarEstadoZoom();
 
@@ -1602,6 +1604,7 @@ function abrirLightboxImagen() {
 
     // Forzamos reflow para que la transición de entrada se dispare
     requestAnimationFrame(() => {
+        lightbox.classList.add('abierto');
         overlay.classList.add('abierto');
         img.classList.add('abierto');
     });
@@ -1616,6 +1619,7 @@ function cerrarLightboxImagen() {
 
     overlay.classList.remove('abierto');
     img.classList.remove('abierto');
+    lightbox.classList.remove('abierto');
 
     desbloquearScrollBody();
     document.removeEventListener('keydown', _cerrarLightboxImagenConEsc);
@@ -1625,7 +1629,7 @@ function cerrarLightboxImagen() {
         lightbox.classList.add('hidden');
         lightbox.classList.remove('flex');
         img.src = '';
-    }, 300);
+    }, 400);
 }
 
 function _cerrarLightboxImagenConEsc(e) {
@@ -1678,6 +1682,7 @@ function _lbActualizarBotonReset() {
     const btn = document.getElementById('lightbox-zoom-reset');
     if (!btn) return;
     const enEscalaBase = _lbEscala <= 1.01;
+    btn.textContent = Math.round(_lbEscala * 100) + '%';
     btn.classList.toggle('opacity-40', enEscalaBase);
     btn.classList.toggle('pointer-events-none', enEscalaBase);
 }
