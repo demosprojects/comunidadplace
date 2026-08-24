@@ -1892,9 +1892,21 @@ async function refrescarPreciosCarritoDesdeServidor() {
 }
 
 function cerrarCarrito() {
+    ocultarCarritoVisualmente();
+    desbloquearScrollBody();
+}
+
+// Muestra/oculta el carrito solo a nivel visual (clases), sin tocar el
+// contador de bloqueo de scroll. Se usa para poder tapar el carrito detrás
+// del modal de QR sin desincronizar bloquearScrollBody()/desbloquearScrollBody().
+function ocultarCarritoVisualmente() {
     document.getElementById('carrito-overlay').classList.add('hidden');
     document.getElementById('carrito-drawer').classList.add('translate-x-full');
-    desbloquearScrollBody();
+}
+
+function mostrarCarritoVisualmente() {
+    document.getElementById('carrito-overlay').classList.remove('hidden');
+    document.getElementById('carrito-drawer').classList.remove('translate-x-full');
 }
 
 function mostrarToastCarrito(texto) {
@@ -1946,6 +1958,17 @@ function mostrarModalQrPedido(telefono, mensaje) {
             <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Cargando QR...</span>
         </div>
     `;
+    // El modal de QR se abre siempre desde el carrito, que ya está abierto
+    // (y ya bloqueó el scroll) atrás. Antes acá quedaban DOS overlays
+    // semitransparentes superpuestos (el del carrito + el del QR), cada uno
+    // haciendo blending en vivo sobre el contenido de atrás (que tiene
+    // animaciones corriendo, como los skeletons con shimmer): eso es lo que
+    // generaba el lag al abrir/mover el modal en PC. Ocultamos el carrito
+    // SOLO visualmente (sin tocar el contador de bloqueo de scroll, que
+    // sigue representando que "algo" sigue abierto) para que quede un único
+    // overlay en pantalla.
+    ocultarCarritoVisualmente();
+
     document.getElementById('modal-qr-pedido').classList.remove('hidden');
     bloquearScrollBody();
 
@@ -1954,14 +1977,37 @@ function mostrarModalQrPedido(telefono, mensaje) {
         cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
         return;
     }
-    QRCode.toCanvas(urlWaMe, { width: 260, margin: 1 }, (error, canvas) => {
-        if (error) {
-            console.error('No se pudo generar el QR del pedido', error);
-            cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
+
+    const opcionesQr = { margin: 1, errorCorrectionLevel: 'L' };
+
+    // Generamos el QR como SVG (texto vectorial) en vez de <canvas>: en
+    // algunas tablets Android con WebViews viejos o con la aceleración por
+    // hardware limitada, crear/dibujar sobre un <canvas> falla (por eso el
+    // QR nunca se veía ahí, aunque en PC funcionara perfecto). El SVG no
+    // depende del motor 2D del navegador, así que es mucho más compatible.
+    // Si por algo raro también fallara, probamos con canvas como respaldo.
+    QRCode.toString(urlWaMe, { ...opcionesQr, type: 'svg' }, (errorSvg, svg) => {
+        if (!errorSvg) {
+            cont.innerHTML = svg;
+            const svgEl = cont.querySelector('svg');
+            if (svgEl) {
+                svgEl.setAttribute('width', '260');
+                svgEl.setAttribute('height', '260');
+                svgEl.style.display = 'block';
+            }
             return;
         }
-        cont.innerHTML = '';
-        cont.appendChild(canvas);
+
+        console.error('No se pudo generar el QR como SVG, probando con canvas', errorSvg);
+        QRCode.toCanvas(urlWaMe, { width: 260, ...opcionesQr }, (errorCanvas, canvas) => {
+            if (errorCanvas) {
+                console.error('No se pudo generar el QR del pedido', errorCanvas);
+                cont.innerHTML = '<span class="text-[11px] font-bold text-red-500 px-3 leading-snug">No pudimos generar el QR</span>';
+                return;
+            }
+            cont.innerHTML = '';
+            cont.appendChild(canvas);
+        });
     });
 }
 
@@ -2001,7 +2047,7 @@ function cerrarModalQrPedido() {
     document.getElementById('modal-qr-pedido').classList.add('hidden');
     desbloquearScrollBody();
     _qrPedidoUrlWhatsappWeb = null;
-    finalizarPedido();
+    finalizarPedido(); // finalizarPedido() -> cerrarCarrito() se encarga de ocultar el carrito y liberar su propio bloqueo de scroll.
 }
 
 // Botón "Ya envié el pedido" dentro del modal de QR.
@@ -2017,9 +2063,22 @@ function confirmarPedidoEnviadoDesdeQr() {
 // Al tocar "Enviar pedido" de nuevo, se genera un QR nuevo con todo incluido.
 function volverAlCarritoDesdeQr() {
     document.getElementById('modal-qr-pedido').classList.add('hidden');
+    // Este desbloquearScrollBody() libera SOLO el bloqueo que agregó el modal
+    // de QR. El del carrito (que nunca se cerró, solo se ocultó visualmente
+    // en mostrarModalQrPedido) sigue en pie, así que NO hay que volver a
+    // llamar bloquearScrollBody() acá.
     desbloquearScrollBody();
     _qrPedidoUrlWhatsappWeb = null;
-    abrirCarrito();
+
+    // En vez de abrirCarrito() (que volvería a bloquear el scroll y
+    // desincronizaría el contador contra el desbloquearScrollBody() de
+    // arriba, dejando el scroll trabado para siempre después de cerrar el
+    // carrito), mostramos el carrito de nuevo y refrescamos sus datos "a
+    // mano", sin tocar el bloqueo de scroll.
+    mostrarCarritoVisualmente();
+    sincronizarDisponibilidadCarrito();
+    renderCarrito();
+    refrescarPreciosCarritoDesdeServidor();
 }
 
 async function enviarPedidoWhatsapp() {
