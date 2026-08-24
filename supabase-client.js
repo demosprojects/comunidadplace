@@ -75,6 +75,19 @@ async function cerrarSesion() {
     window.location.href = 'login.html';
 }
 
+// Confirmación antes de cerrar sesión desde el botón del menú (usa el mismo
+// modal de confirmación que el resto del sitio). El cierre automático que
+// ocurre al rechazar los Términos y Condiciones sigue llamando a
+// cerrarSesion() directamente, sin pedir confirmación.
+async function confirmarCerrarSesion() {
+    const ok = await confirmarAccion(
+        'Vas a tener que volver a iniciar sesión para acceder a tu panel.',
+        { titulo: '¿Cerrar sesión?', textoConfirmar: 'Cerrar sesión' }
+    );
+    if (!ok) return;
+    await cerrarSesion();
+}
+
 // Formatea precio en pesos
 function formatoPrecio(n) {
     return '$' + Number(n).toLocaleString('es-AR');
@@ -501,11 +514,16 @@ function confirmarAccion(mensaje, opciones = {}) {
         box.append(pTitulo, pMsg, acciones);
         overlay.appendChild(box);
 
-        const cerrar = (resultado) => { overlay.remove(); resolve(resultado); };
+        const cerrar = (resultado) => {
+            overlay.remove();
+            document.body.classList.remove('overflow-hidden');
+            resolve(resultado);
+        };
         overlay.addEventListener('click', (e) => { if (e.target === overlay) cerrar(false); });
         btnCancelar.addEventListener('click', () => cerrar(false));
         btnOk.addEventListener('click', () => cerrar(true));
 
+        document.body.classList.add('overflow-hidden');
         document.body.appendChild(overlay);
     });
 }
