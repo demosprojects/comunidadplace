@@ -172,20 +172,87 @@
 
         /* LIGHTBOX IMAGEN PRODUCTO */
         #lightbox-imagen-overlay {
-            background: rgba(0,0,0,0.96);
+            background:
+                radial-gradient(ellipse 90% 70% at 50% 38%, rgba(55,55,60,0.35) 0%, rgba(0,0,0,0) 62%),
+                rgba(6, 6, 8, 0.72);
+            backdrop-filter: blur(22px) saturate(1.15);
+            -webkit-backdrop-filter: blur(22px) saturate(1.15);
             opacity: 0;
-            transition: opacity .3s ease;
+            transition: opacity .35s ease;
         }
         #lightbox-imagen-overlay.abierto { opacity: 1; }
 
+        #lightbox-imagen-marco {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at 50% 40%, #ffffff 0%, #f3f3f5 58%, #e6e6ea 100%);
+            border-radius: 28px;
+            padding: 1.35rem 1.6rem;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(14px) scale(0.96);
+            transition: opacity .4s ease, transform .5s cubic-bezier(.16,1,.3,1);
+            box-shadow:
+                0 0 0 1px rgba(255,255,255,0.22),
+                0 18px 40px rgba(0,0,0,0.28),
+                0 48px 90px rgba(0,0,0,0.38);
+            max-width: min(92vw, 740px);
+        }
+        #lightbox-imagen.abierto #lightbox-imagen-marco {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        #lightbox-imagen-marco::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            pointer-events: none;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+        }
+
         #lightbox-imagen-img {
             opacity: 0;
-            transition: opacity .28s ease;
+            transition: opacity .32s ease;
             touch-action: none;
         }
         #lightbox-imagen-img.abierto { opacity: 1; }
         #lightbox-imagen-img.lb-transicion { transition: opacity .28s ease, transform .28s cubic-bezier(.16,1,.3,1); }
         #lightbox-imagen-viewport { touch-action: none; }
+
+        .lightbox-btn-cerrar {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity .3s ease .05s, transform .35s cubic-bezier(.16,1,.3,1) .05s, background .2s ease, color .2s ease;
+        }
+        #lightbox-imagen.abierto .lightbox-btn-cerrar {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .lightbox-chrome {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity .35s ease .08s, transform .4s cubic-bezier(.16,1,.3,1) .08s;
+        }
+        #lightbox-imagen.abierto .lightbox-chrome {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .lightbox-zoom-bar {
+            background: rgba(18,18,20,0.78);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+        }
+        @media (max-width: 640px) {
+            #lightbox-imagen-marco {
+                border-radius: 22px;
+                padding: 1rem 1.1rem;
+            }
+        }
 
         .zoom-badge { transition: opacity .25s ease, transform .25s ease; }
         @media (hover: hover) {
@@ -1012,40 +1079,47 @@
     </div>
 
     <!-- LIGHTBOX: imagen de producto ampliada, con zoom y desplazamiento -->
-    <div id="lightbox-imagen" class="fixed inset-0 z-[120] hidden flex-col" role="dialog" aria-modal="true" aria-label="Imagen ampliada del producto">
-        <div id="lightbox-imagen-overlay" class="absolute inset-0 pointer-events-none"></div>
+    <div id="lightbox-imagen" class="fixed inset-0 z-[120] hidden flex-col items-center justify-center" role="dialog" aria-modal="true" aria-label="Imagen ampliada del producto">
+        <div id="lightbox-imagen-overlay" class="absolute inset-0" onclick="cerrarLightboxImagen()"></div>
 
-        <button onclick="cerrarLightboxImagen()" aria-label="Cerrar imagen" class="absolute top-4 right-4 sm:top-6 sm:right-6 z-20 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/10 hover:bg-yellow-400 border border-white/15 backdrop-blur flex items-center justify-center text-white hover:text-black transition-all active:scale-90">
-            <svg class="w-4 h-4 sm:w-[18px] sm:h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <button onclick="cerrarLightboxImagen()" aria-label="Cerrar imagen" class="lightbox-btn-cerrar absolute top-4 right-4 sm:top-6 sm:right-6 z-20 w-11 h-11 rounded-full bg-white text-black hover:bg-yellow-400 flex items-center justify-center shadow-[0_10px_30px_rgba(0,0,0,0.35)] active:scale-90">
+            <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
             </svg>
         </button>
 
-        <!-- Área de gestos: pinch para zoom, arrastre para desplazar, doble tap para alternar zoom -->
-        <div id="lightbox-imagen-viewport" class="relative z-[5] flex-1 w-full flex items-center justify-center overflow-hidden select-none">
-            <img id="lightbox-imagen-img" src="" alt="" draggable="false" class="max-w-[92vw] max-h-[68vh] sm:max-h-[74vh] object-contain rounded-2xl shadow-[0_30px_90px_rgba(0,0,0,0.65)] select-none">
-        </div>
-
-        <div class="relative z-[10] flex flex-col items-center gap-3 pt-2 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex-shrink-0">
-            <div class="flex items-center gap-1 bg-white/10 border border-white/15 backdrop-blur rounded-full p-1.5">
-                <button onclick="lightboxZoomOut()" aria-label="Alejar" class="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/15 active:scale-90 transition-all">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" d="M5 12h14" />
-                    </svg>
-                </button>
-                <button id="lightbox-zoom-reset" onclick="lightboxZoomReset()" aria-label="Restablecer zoom" class="px-3.5 h-9 rounded-full flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/15 active:scale-90 transition-all opacity-40 pointer-events-none">
-                    1:1
-                </button>
-                <button onclick="lightboxZoomIn()" aria-label="Acercar" class="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/15 active:scale-90 transition-all">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" d="M12 5v14M5 12h14" />
-                    </svg>
-                </button>
+        <div class="relative z-[5] w-full max-w-[min(92vw,740px)] flex flex-col items-center px-4 pb-[env(safe-area-inset-bottom)]">
+            <!-- Área de gestos: pinch para zoom, arrastre para desplazar, doble tap para alternar zoom -->
+            <div id="lightbox-imagen-viewport" class="w-full flex items-center justify-center overflow-hidden select-none">
+                <div id="lightbox-imagen-marco">
+                    <img id="lightbox-imagen-img" src="" alt="" draggable="false" class="w-auto h-auto max-w-[min(82vw,640px)] max-h-[62vh] sm:max-h-[68vh] object-contain select-none">
+                </div>
             </div>
-            <p class="flex items-center gap-2 text-white/60 text-[10px] sm:text-xs font-black uppercase tracking-widest">
-                <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0"></span>
-                Producto de Comunidad Emprendedora Tienda Online
-            </p>
+
+            <div class="lightbox-chrome relative z-[10] flex flex-col items-center gap-2 mt-2.5">
+                <div class="lightbox-zoom-bar flex items-center gap-0.5 rounded-full p-1.5">
+                    <button onclick="lightboxZoomOut()" aria-label="Alejar" class="w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-white/12 active:scale-90 transition-all">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" d="M5 12h14" />
+                        </svg>
+                    </button>
+                    <button id="lightbox-zoom-reset" onclick="lightboxZoomReset()" aria-label="Restablecer zoom" class="min-w-[3.25rem] px-3 h-10 rounded-full flex items-center justify-center text-white text-[11px] font-bold tabular-nums tracking-wide hover:bg-white/12 active:scale-90 transition-all opacity-40 pointer-events-none">
+                        100%
+                    </button>
+                    <button onclick="lightboxZoomIn()" aria-label="Acercar" class="w-10 h-10 rounded-full flex items-center justify-center text-white hover:bg-white/12 active:scale-90 transition-all">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex flex-col items-center gap-1 max-w-[90vw] text-center">
+                    <p id="lightbox-imagen-titulo" class="text-white text-sm sm:text-base font-bold tracking-tight leading-snug"></p>
+                    <p class="flex items-center gap-2 text-white/45 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.18em]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0"></span>
+                        Comunidad Emprendedora
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 
