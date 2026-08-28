@@ -697,7 +697,7 @@ function mostrarAvisoProductosNuevos() {
         : `<button onclick="verNovedadesProductos()" class="w-full sm:w-auto text-center bg-black text-white px-4 py-2 rounded-full font-black uppercase text-[11px] tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 whitespace-nowrap">Ver novedades</button>`;
 
     el.innerHTML = `
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 pr-9 sm:pr-4">
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 pr-10 sm:pr-12">
             <div class="flex items-start sm:items-center gap-3 min-w-0 flex-1">
                 <span class="flex-shrink-0 w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center">
                     <svg class="w-5 h-5 text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
