@@ -98,6 +98,57 @@
            qué breakpoint se muestra cada versión del botón (mobile/desktop). */
         .cp-emp-oculto { display: none !important; }
 
+        /* Directorio "Ver todos": la grilla NO puede ser el flex-item con
+           overflow. Si grid + flex-1 + overflow van en el mismo nodo, las
+           filas se comprimen a ~0 y las cards se superponen (PC y mobile). */
+        #modal-directorio-emprendedores {
+            /* Deja una franja oscura arriba (tap para cerrar) y evita que
+               92vh empuje la X debajo de la barra del navegador en mobile. */
+            padding-top: max(2.75rem, env(safe-area-inset-top, 0px));
+        }
+        @media (min-width: 640px) {
+            #modal-directorio-emprendedores { padding-top: 1rem; }
+        }
+        #modal-directorio-panel {
+            width: 100%;
+            max-width: 56rem;
+            max-height: min(82dvh, calc(100% - 0.25rem));
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+        @supports not (height: 1dvh) {
+            #modal-directorio-panel { max-height: min(82vh, calc(100% - 0.25rem)); }
+        }
+        #directorio-emprendedores-scroll {
+            flex: 0 1 auto;
+            min-height: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        #directorio-emprendedores-lista {
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-auto-rows: auto;
+            align-content: start;
+            align-items: start;
+            gap: 0.75rem;
+        }
+        @media (min-width: 640px) {
+            #directorio-emprendedores-lista {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1rem;
+            }
+        }
+        #directorio-emprendedores-lista > a {
+            position: relative;
+            min-width: 0;
+            height: auto;
+            align-self: stretch;
+        }
+
         #modal-producto-overlay {
             background: rgba(0,0,0,0.75);
             opacity: 0;
@@ -855,19 +906,24 @@
     <!-- MODAL DIRECTORIO: todos los emprendedores -->
     <div id="modal-directorio-emprendedores" class="fixed inset-0 z-[68] hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
         <div class="absolute inset-0 bg-black/90" onclick="cerrarDirectorioEmprendedores()"></div>
-        <div class="bg-white w-full max-w-4xl max-h-[92vh] max-h-[92dvh] rounded-t-[28px] sm:rounded-[28px] relative z-10 shadow-2xl animate-fade-in flex flex-col overflow-hidden">
-            <div class="flex items-start justify-between gap-3 px-5 sm:px-7 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+        <div id="modal-directorio-panel" class="bg-white rounded-t-[28px] sm:rounded-[28px] relative z-10 shadow-2xl animate-fade-in">
+            <div class="sm:hidden flex justify-center pt-3 pb-0 flex-shrink-0" aria-hidden="true">
+                <span class="w-10 h-1 rounded-full bg-gray-300"></span>
+            </div>
+            <div class="flex items-start justify-between gap-3 px-5 sm:px-7 pt-3 sm:pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
                 <div class="min-w-0">
                     <span class="text-yellow-600 font-black uppercase tracking-widest text-[10px]">Comunidad</span>
                     <h2 class="text-base sm:text-2xl font-900 uppercase italic leading-tight mt-0.5 whitespace-nowrap truncate">Todos los emprendedores</h2>
                     <p id="directorio-emprendedores-contador" class="text-xs font-semibold text-gray-400 mt-1"></p>
                 </div>
-                <button type="button" onclick="cerrarDirectorioEmprendedores()" aria-label="Cerrar" class="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 hover:bg-black hover:text-white flex items-center justify-center text-gray-500 transition-colors">
+                <button type="button" onclick="cerrarDirectorioEmprendedores()" aria-label="Cerrar" class="flex-shrink-0 w-11 h-11 sm:w-9 sm:h-9 rounded-full bg-gray-100 hover:bg-black hover:text-white flex items-center justify-center text-gray-500 transition-colors">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/></svg>
                 </button>
             </div>
-            <div id="directorio-emprendedores-lista" class="flex-1 overflow-y-auto scrollbar-hide p-3 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-stretch">
-                <!-- cards generadas por JS -->
+            <div id="directorio-emprendedores-scroll" class="scrollbar-hide p-3 sm:p-6">
+                <div id="directorio-emprendedores-lista">
+                    <!-- cards generadas por JS -->
+                </div>
             </div>
         </div>
     </div>
