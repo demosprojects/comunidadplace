@@ -1989,7 +1989,7 @@ function renderDirectorioEmprendedores() {
             ? `emprendedor.html?t=${encodeURIComponent(slugTienda)}`
             : `emprendedor.html?id=${encodeURIComponent(e.id)}`;
         return `
-            <a href="${hrefTienda}" class="group w-full sm:h-full flex flex-col text-left bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:border-black hover:shadow-xl transition-all active:scale-[0.99]">
+            <a href="${hrefTienda}" class="group w-full flex flex-col text-left bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm hover:border-black hover:shadow-xl transition-all active:scale-[0.99]">
                 <div class="relative h-16 sm:h-32 flex-shrink-0 overflow-hidden bg-zinc-900">
                     <div class="absolute inset-0" style="background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1.5px, transparent 1.5px); background-size: 16px 16px;"></div>
                     ${banner}
