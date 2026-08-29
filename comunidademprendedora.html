@@ -30,6 +30,50 @@
             .text-stroke-yellow { -webkit-text-stroke: 3px #FBBF24; }
         }
 
+        /* ── Hero estilo "banner dorado" ── */
+        .hero-dots {
+            position: absolute;
+            width: 260px;
+            height: 260px;
+            background-image: radial-gradient(circle, rgba(251,191,36,0.55) 1.5px, transparent 1.6px);
+            background-size: 15px 15px;
+            pointer-events: none;
+        }
+        .hero-dots--tr { top: 0; right: 0; clip-path: polygon(100% 0, 100% 100%, 15% 0); }
+        .hero-dots--bl { bottom: 0; left: 0; clip-path: polygon(0 100%, 85% 100%, 0 0); }
+
+        .hero-beam {
+            position: absolute;
+            width: 2px;
+            height: 160%;
+            background: linear-gradient(to bottom, transparent 10%, #FBBF24 45%, #FBBF24 55%, transparent 90%);
+            box-shadow: 0 0 8px 1px rgba(251,191,36,0.5);
+        }
+        .hero-beam--1 { top: -40%; right: 6%;  opacity: 0.85; transform: rotate(24deg); }
+        .hero-beam--2 { top: -50%; right: 12%; opacity: 0.45; transform: rotate(24deg); }
+        .hero-beam--3 { top: -50%; right: 18%; opacity: 0.25; transform: rotate(24deg); }
+        .hero-beam--4 { bottom: -40%; left: 4%;  opacity: 0.85; transform: rotate(24deg); }
+        .hero-beam--5 { bottom: -50%; left: 10%; opacity: 0.4;  transform: rotate(24deg); }
+
+        .hero-strip {
+            position: relative;
+            background: #000;
+            border-top: 1px solid rgba(251,191,36,0.35);
+            border-bottom: 1px solid rgba(251,191,36,0.35);
+        }
+        .hero-strip::before,
+        .hero-strip::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 140px;
+            background-image: radial-gradient(circle, rgba(251,191,36,0.5) 1.5px, transparent 1.6px);
+            background-size: 13px 13px;
+        }
+        .hero-strip::before { left: 0; }
+        .hero-strip::after { right: 0; }
+
         /* Estilos del botón ScrollTop */
         #scroll-top-btn {
             transition: all 0.3s ease;
@@ -80,25 +124,38 @@
     <i class="fas fa-arrow-up"></i>
 </button>
 
-<header class="relative min-h-[600px] md:h-[650px] flex items-center bg-black overflow-hidden">
-    <img src="https://res.cloudinary.com/dl2tftoum/image/upload/v1788046762/wpxwyuvlajgrfcxo1joh.webp" class="absolute inset-0 w-full h-full object-cover opacity-60" alt="Feria Villa Ángela">
-    <div class="container mx-auto px-6 relative z-10">
-        <h1 class="text-white text-4xl sm:text-5xl md:text-7xl font-black leading-tight flex flex-wrap items-center text-stroke">
-            <span>COMUNIDAD</span>
-            <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp" alt="Foco" class="w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 ml-4"
-                 style="filter: brightness(1.3) drop-shadow(0 0 6px #fff) drop-shadow(0 0 12px rgba(255,255,200,0.8));">
-        </h1>
-        
-        <h1 class="text-white text-4xl sm:text-5xl md:text-7xl font-black leading-tight">
-            <span class="text-yellow-comunidad uppercase text-stroke-yellow">
-                Emprendedora
-            </span>
-        </h1>
+<header class="relative min-h-[600px] lg:min-h-[720px] flex items-center bg-black overflow-hidden py-16 lg:py-20">
+    <!-- Decoración: puntos y haces dorados, estilo banner -->
+    <div class="hero-dots hero-dots--tr"></div>
+    <div class="hero-dots hero-dots--bl"></div>
+    <div class="hero-beam hero-beam--1"></div>
+    <div class="hero-beam hero-beam--2"></div>
+    <div class="hero-beam hero-beam--3"></div>
+    <div class="hero-beam hero-beam--4"></div>
+    <div class="hero-beam hero-beam--5"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40"></div>
 
-        <p class="text-yellow-comunidad text-2xl sm:text-3xl md:text-4xl font-black mt-2 uppercase tracking-wide leading-tight">Villa Ángela</p>
-        <p class="text-yellow-comunidad text-xl md:text-2xl font-bold mt-1 uppercase tracking-wide leading-snug">Fundación Transformando Realidades</p>
-        <p class="text-white text-base md:text-lg mt-4 max-w-lg">Impulsamos el desarrollo y las oportunidades de nuestra comunidad.</p>
-        
+    <div class="container mx-auto px-6 relative z-10 pb-14 md:pb-16">
+        <div class="flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-0">
+            <div class="lg:pr-10">
+                <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786838227/qferxddoruayigvek9wt.webp" alt="Comunidad Emprendedora" class="h-36 sm:h-44 md:h-56 lg:h-64 w-auto">
+
+                <p class="text-yellow-comunidad text-2xl sm:text-3xl md:text-4xl font-black mt-4 uppercase tracking-wide leading-tight">Villa Ángela</p>
+            </div>
+
+            <div class="hidden lg:block w-px self-stretch bg-yellow-comunidad/40 mx-2"></div>
+
+            <div class="lg:pl-10 lg:max-w-md">
+                <p class="text-yellow-comunidad text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-wide leading-[1.1] text-stroke-yellow">
+                    Fundación<br>Transformando<br>Realidades
+                </p>
+                <div class="w-16 h-px bg-yellow-comunidad/60 my-4"></div>
+                <p class="text-white/90 text-base md:text-lg leading-relaxed">
+                    Impulsamos el desarrollo y las oportunidades de nuestra comunidad.
+                </p>
+            </div>
+        </div>
+
         <div class="flex flex-col sm:flex-row gap-4 mt-8">
             <button id="btn-feria" class="w-full sm:w-auto bg-yellow-comunidad text-black font-bold py-4 px-8 rounded-full hover:bg-yellow-500 transition flex items-center justify-center gap-2 shadow-lg">
                 <i class="fas fa-map-marker-alt"></i> Ver próximos eventos
@@ -114,10 +171,12 @@
         </div>
     </div>
     
-    <div class="absolute bottom-0 left-0 w-full leading-none z-20 translate-y-[1px]">
-        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" class="relative block w-full h-[40px] md:h-[60px] fill-white">
-            <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C57.23,115.32,126.23,121.17,185.83,107.41,242.42,94.25,283.33,73.53,321.39,56.44Z"></path>
-        </svg>
+    <div class="absolute bottom-0 left-0 w-full z-20">
+        <div class="hero-strip py-3 md:py-4">
+            <p class="relative z-10 text-center text-yellow-comunidad text-xs sm:text-sm md:text-base font-semibold tracking-[0.35em] uppercase">
+                Emprendemos juntos.
+            </p>
+        </div>
     </div>
 </header>
 
