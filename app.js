@@ -460,7 +460,19 @@ document.addEventListener('DOMContentLoaded', () => {
         observer.observe(container, { childList: true });
 
         setTimeout(() => {
-            quitarSkeletons();
+            // Si a esta altura todavía no llegó contenido real (por ejemplo,
+            // porque la conexión es lenta o Firestore no responde), en vez de
+            // dejar la sección en blanco sin explicación mostramos un aviso
+            // con un botón para reintentar. Si el contenido real llega
+            // después de todos modos (site-data.js reemplaza el innerHTML
+            // completo apenas responde Firestore), este aviso se reemplaza solo.
+            if (!hayContenidoReal()) {
+                quitarSkeletons();
+                const aviso = document.createElement('p');
+                aviso.className = 'text-slate-400 text-sm italic w-full text-center';
+                aviso.innerHTML = 'Esto está tardando más de lo normal para cargar. <button onclick="location.reload()" class="underline font-bold text-yellow-600">Reintentar</button>';
+                container.appendChild(aviso);
+            }
             observer.disconnect();
         }, SKELETON_TIMEOUT_MS);
     }
