@@ -15,6 +15,36 @@ function escaparHtml(texto) {
     return div.innerHTML;
 }
 
+/* ---------- LOADER PARA LOGOS (mientras carga el servidor de imágenes) ----------
+   Nuestro servidor de imágenes puede tardar en responder, sobre todo en
+   conexiones móviles. En vez de dejar el círculo en blanco hasta que la
+   imagen esté lista, mostramos un "skeleton" animado (mismo estilo que ya
+   usa el resto del sitio) y recién mostramos la imagen real cuando terminó
+   de cargar (evento onload). Si la imagen falla (onerror), sacamos el
+   skeleton igual y dejamos un ícono genérico para que no quede roto. */
+function imgConLoader(url, alt, imgClass) {
+    const urlEscapada = escaparHtml(url);
+    const altEscapado = escaparHtml(alt);
+    return `
+        <div class="skeleton w-full h-full rounded-full flex items-center justify-center">
+            <img src="${urlEscapada}" alt="${altEscapado}" class="${imgClass} opacity-0 transition-opacity duration-500"
+                 onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton');"
+                 onerror="this.parentElement.classList.remove('skeleton'); this.classList.remove('opacity-0'); this.parentElement.innerHTML='<i class=\\'fas fa-store text-slate-300 text-2xl\\'></i>';">
+        </div>`;
+}
+
+/* ---------- MENSAJE DE ERROR / REINTENTO ----------
+   Se usa cuando Firestore tarda demasiado o falla (conexión lenta o
+   bloqueada, típico en datos móviles). Antes esto dejaba la sección
+   completamente en blanco y sin explicación; ahora avisamos y damos
+   la opción de reintentar sin tener que buscar cómo refrescar. */
+function mensajeErrorCarga(claseAdicional = '') {
+    return `<p class="text-slate-400 text-sm italic w-full ${claseAdicional}">
+        Esto está tardando más de lo normal para cargar.
+        <button onclick="location.reload()" class="underline font-bold text-yellow-600">Reintentar</button>
+    </p>`;
+}
+
 /* ---------- 1. PRÓXIMOS EVENTOS (una o varias ferias activas) ---------- */
 // Antes se mostraba una sola feria "activa" a la vez. Ahora se pueden marcar
 // varias como activas (por ejemplo la de este domingo y la siguiente) y acá
@@ -124,7 +154,8 @@ function escucharFeriaActiva() {
             }).join('');
         }, err => {
             console.error('Error al escuchar las ferias activas:', err);
-            if (sinEventos) sinEventos.classList.remove('hidden');
+            container.innerHTML = mensajeErrorCarga('text-center');
+            if (sinEventos) sinEventos.classList.add('hidden');
         });
 }
 
@@ -160,6 +191,8 @@ function escucharGaleria() {
         window.actualizarImagenesGaleria();
     }, err => {
         console.error('Error al escuchar la galería:', err);
+        container.innerHTML = mensajeErrorCarga();
+        if (vacio) vacio.classList.add('hidden');
     });
 }
 
@@ -193,7 +226,7 @@ function escucharEmprendedores() {
                 <div class="flex-none w-36 md:w-40 cursor-pointer pointer-events-auto" onclick="abrirEmprendedor(${i})">
                     <div class="relative w-28 h-28 md:w-32 md:h-32 mx-auto mb-4 group">
                         <div class="w-full h-full rounded-full border-4 border-yellow-comunidad p-1 shadow-md transition-transform duration-300 group-hover:scale-105">
-                            <img src="${escaparHtml(e.logoUrl)}" class="w-full h-full object-cover rounded-full bg-slate-100" alt="${escaparHtml(e.nombre)}">
+                            ${imgConLoader(e.logoUrl, e.nombre, 'w-full h-full object-cover rounded-full bg-slate-100')}
                         </div>
                         <span class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-yellow-comunidad border-2 border-white shadow-md flex items-center justify-center">
                             <i class="fas fa-info text-black text-[10px]"></i>
@@ -222,7 +255,7 @@ function escucharEmprendedores() {
                             <i class="fas fa-quote-left text-yellow-400 text-3xl absolute top-6 left-6 opacity-30"></i>
                             <p class="relative z-10 mb-6 mt-4">"${escaparHtml(e.testimonio)}"</p>
                             <div class="flex items-center justify-center gap-3 not-italic">
-                                <img src="${escaparHtml(e.logoUrl)}" class="w-10 h-10 rounded-full object-cover border-2 border-yellow-comunidad" alt="${escaparHtml(e.nombre)}">
+                                <div class="w-10 h-10 flex-shrink-0">${imgConLoader(e.logoUrl, e.nombre, 'w-10 h-10 rounded-full object-cover border-2 border-yellow-comunidad')}</div>
                                 <div class="text-left leading-tight">
                                     <p class="font-bold text-black text-sm">${escaparHtml(e.nombre)}</p>
                                     <p class="text-xs text-slate-400">${escaparHtml(e.categoria || '')}</p>
@@ -234,6 +267,9 @@ function escucharEmprendedores() {
         }
     }, err => {
         console.error('Error al escuchar emprendedores:', err);
+        container.innerHTML = mensajeErrorCarga();
+        if (testimoniosContainer) testimoniosContainer.innerHTML = mensajeErrorCarga('col-span-full text-center');
+        if (testimoniosVacio) testimoniosVacio.classList.add('hidden');
     });
 }
 
@@ -265,7 +301,7 @@ function escucharComercios() {
                 <div class="flex-none w-36 md:w-40 cursor-pointer pointer-events-auto" onclick="abrirComercio(${i})">
                     <div class="relative w-28 h-28 md:w-32 md:h-32 mx-auto mb-4 group">
                         <div class="w-full h-full rounded-full border-4 border-slate-800 p-1 shadow-md transition-transform duration-300 group-hover:scale-105">
-                            <img src="${escaparHtml(c.logoUrl)}" class="w-full h-full object-cover rounded-full bg-slate-100" alt="${escaparHtml(c.nombre)}">
+                            ${imgConLoader(c.logoUrl, c.nombre, 'w-full h-full object-cover rounded-full bg-slate-100')}
                         </div>
                         <span class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-slate-800 border-2 border-white shadow-md flex items-center justify-center">
                             <i class="fas fa-info text-white text-[10px]"></i>
@@ -279,6 +315,7 @@ function escucharComercios() {
         window.iniciarCarruselInfinito('comercios-container');
     }, err => {
         console.error('Error al escuchar comercios:', err);
+        container.innerHTML = mensajeErrorCarga();
     });
 }
 
