@@ -230,25 +230,40 @@
 }
 .cp-hero__btn--primary:hover .cp-hero__btn-arrow { transform: translateX(0.25rem); }
 
-/* botón "Conoce más" (a, va a la landing externa) → cp-hero__btn cp-hero__btn--tertiary
-   Estilo "ghost": no compite visualmente con el CTA primario ni con
-   "Quiero vender", pero se mantiene bien visible y clickeable
-   tanto en mobile (dentro del wrap de cp-hero__actions) como en desktop. */
+/* botón "Conocé la comunidad" (a, va a la landing externa) → cp-hero__btn cp-hero__btn--tertiary
+   Estilo "chip/sticker": distinto a propósito de los otros dos CTAs
+   (no es un botón sólido ni un outline clásico) para que se lea como
+   su propia categoría -> "info de la comunidad", no "comprar/vender".
+   Sombra dura + leve rotación = look juguetón que llama el ojo sin
+   competir en peso visual con el CTA primario negro. */
 .cp-hero__btn--tertiary {
-    background-color: transparent;
+    position: relative;
+    background-color: #fff;
     color: #111114;
-    padding-left: 0.25rem;
-    padding-right: 0.25rem;
-    text-decoration: underline;
-    text-decoration-color: rgba(17, 17, 20, 0.25);
-    text-underline-offset: 4px;
-    text-decoration-thickness: 2px;
+    border: 2px solid #000;
+    border-radius: 9999px;
+    padding: 0.75rem 1.5rem 0.75rem 1.125rem;
+    box-shadow: 4px 4px 0 0 #000;
+    transform: rotate(-1.5deg);
 }
 .cp-hero__btn--tertiary:hover {
-    color: #ca8a04; /* yellow-600, hace juego con el badge */
-    text-decoration-color: #facc15; /* yellow-400 */
+    background-color: #fefce8; /* yellow-50 */
+    color: #111114;
+    transform: rotate(-1.5deg) translate(-2px, -2px);
+    box-shadow: 6px 6px 0 0 #facc15; /* yellow-400 */
+}
+.cp-hero__btn--tertiary:active {
+    transform: rotate(-1.5deg) translate(0, 0) scale(0.96);
+    box-shadow: 2px 2px 0 0 #000;
 }
 .cp-hero__btn--tertiary:hover .cp-hero__btn-arrow { transform: translateX(0.25rem); }
+
+/* puntito pulsante dentro del chip, eco del badge "Comunidad
+   emprendedora" de arriba → refuerza que este botón habla de
+   comunidad, no de venta */
+.cp-hero__btn--tertiary .cp-hero__ping-wrap { height: 0.4rem; width: 0.4rem; }
+.cp-hero__btn--tertiary .cp-hero__ping { background-color: #facc15; }
+.cp-hero__btn--tertiary .cp-hero__dot { background-color: #eab308; }
 
 /* ── Columna de imagen (desktop) ──────────────────────── */
 
