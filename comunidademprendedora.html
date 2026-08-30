@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comunidad Emprendedora - Villa Ángela</title>
+    <title>Comunidad Emprendedora | Villa Ángela</title>
     <link rel="shortcut icon" href="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
@@ -162,21 +162,21 @@
             </div>
         </div>
 
-        <div class="flex flex-wrap gap-3 mt-10 justify-center lg:justify-start">
-            <button id="btn-feria" class="inline-flex items-center justify-center gap-2 bg-yellow-comunidad text-black font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full hover:bg-yellow-500 transition shadow-lg">
-                <i class="fas fa-map-marker-alt"></i> Ver próximos eventos
+        <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 mt-10 justify-center lg:justify-start">
+            <button id="btn-feria" class="w-full sm:w-auto inline-flex items-center justify-center text-center gap-2 bg-yellow-comunidad text-black font-bold text-xs sm:text-sm py-3 sm:py-2.5 px-3 sm:px-5 rounded-full hover:bg-yellow-500 active:scale-95 transition shadow-lg">
+                <i class="fas fa-map-marker-alt"></i> <span>Próximos eventos</span>
             </button>
-            <button id="btn-participar" class="inline-flex items-center justify-center gap-2 bg-white text-black font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full hover:bg-slate-100 transition shadow-lg">
-                <i class="far fa-edit"></i> Quiero participar
+            <button id="btn-participar" class="w-full sm:w-auto inline-flex items-center justify-center text-center gap-2 bg-white text-black font-bold text-xs sm:text-sm py-3 sm:py-2.5 px-3 sm:px-5 rounded-full hover:bg-slate-100 active:scale-95 transition shadow-lg">
+                <i class="far fa-edit"></i> <span>Quiero participar</span>
             </button>
-            <!-- Reemplazá la URL por la de Comunidad Place -->
+            <!-- Reemplazá la URL por la de Comunidad Emprendedora, tu mercado virtual -->
             <a id="btn-comunidad-place" href="https://comunidademprendedora.com.ar/" target="_blank" rel="noopener"
-               class="inline-flex items-center justify-center gap-2 bg-black text-white font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full hover:bg-slate-800 transition shadow-lg border border-white/10">
-                <i class="fas fa-bag-shopping text-yellow-comunidad"></i> Ir al mercado virtual
+               class="w-full sm:w-auto inline-flex items-center justify-center text-center gap-2 bg-yellow-comunidad text-black font-bold text-xs sm:text-sm py-3 sm:py-2.5 px-3 sm:px-5 rounded-full hover:bg-yellow-500 active:scale-95 transition shadow-lg border border-black/10">
+                <i class="fas fa-bag-shopping"></i> <span>Mercado virtual</span>
             </a>
             <a id="btn-descuentos" href="#comercios"
-               class="inline-flex items-center justify-center gap-2 bg-transparent text-yellow-comunidad font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full hover:bg-yellow-comunidad hover:text-black transition shadow-lg border border-yellow-comunidad/60">
-                <i class="fas fa-tags"></i> Descuentos para emprendedores
+               class="w-full sm:w-auto inline-flex items-center justify-center text-center gap-2 bg-transparent text-yellow-comunidad font-bold text-xs sm:text-sm py-3 sm:py-2.5 px-3 sm:px-5 rounded-full hover:bg-yellow-comunidad hover:text-black active:scale-95 transition shadow-lg border border-yellow-comunidad/60">
+                <i class="fas fa-tags"></i> <span class="hidden sm:inline">Descuentos para emprendedores</span><span class="sm:hidden">Descuentos</span>
             </a>
         </div>
     </div>
@@ -271,8 +271,7 @@
             <div class="flex flex-col items-center gap-3">
                 <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Escribinos directo</p>
                 <div class="flex flex-wrap items-center justify-center gap-4">
-                    <!-- Reemplazá el número por el real, con código de país (Ej: 5493735123456) -->
-                    <a href="https://wa.me/NUMERO_WHATSAPP" target="_blank" rel="noopener"
+                    <a href="https://wa.me/5493735533008" target="_blank" rel="noopener"
                        class="group flex items-center gap-3 bg-white border border-slate-200 hover:border-transparent hover:bg-[#25D366] rounded-full pl-3 pr-5 py-3 shadow-sm hover:shadow-lg transition-all">
                         <span class="w-9 h-9 rounded-full bg-[#25D366]/10 group-hover:bg-white/20 flex items-center justify-center flex-shrink-0 transition-colors">
                             <i class="fab fa-whatsapp text-[#25D366] group-hover:text-white text-lg transition-colors"></i>
@@ -395,7 +394,10 @@
 
 <section class="py-16 md:py-24 bg-slate-50 overflow-hidden text-center">
     <div class="container mx-auto px-6">
-        <h2 class="text-2xl md:text-3xl font-black mb-12">Emprendedores que participan</h2>
+        <h2 class="text-2xl md:text-3xl font-black mb-2">Emprendedores que participan</h2>
+        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-12 italic">
+            Tocá en el logo del emprendedor para mas información.
+        </p>
         <div class="relative flex items-center">
             <div id="carousel-container" class="flex overflow-x-auto gap-6 md:gap-10 pb-10 no-scrollbar pointer-events-none px-4 md:px-10 justify-center">
                 <!-- Los emprendedores se cargan dinamicamente desde Firestore (coleccion emprendedores) via site-data.js -->
@@ -459,7 +461,10 @@
 <section id="comercios" class="py-16 md:py-24 bg-slate-50 overflow-hidden text-center scroll-mt-24">
     <div class="container mx-auto px-6">
         <h2 class="text-2xl md:text-3xl font-black mb-2">Comercios adheridos</h2>
-        <p class="text-slate-400 uppercase tracking-widest text-xs font-bold mb-12">Comercios que apoyan a la comunidad</p>
+        <p class="text-slate-500 text-sm font-semibold normal-case tracking-normal mb-2">Comercios que ofrecen descuentos a emprendedores</p>
+        <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-12 italic">
+            Tocá un comercio para ver todos los detalles.
+        </p>
         <div class="relative flex items-center">
             <div id="comercios-container" class="flex overflow-x-auto gap-6 md:gap-10 pb-10 no-scrollbar pointer-events-none px-4 md:px-10 justify-center">
                 <!-- Los comercios se cargan dinamicamente desde Firestore (coleccion comercios) via site-data.js -->
@@ -484,62 +489,62 @@
             </div> </div> </div> 
     </section>
 
-<section id="comunidad-place" class="py-14 md:py-24 bg-white scroll-mt-24">
+<section id="mercado-virtual" class="py-14 md:py-24 bg-slate-50 scroll-mt-24">
     <div class="container mx-auto px-4 sm:px-6">
-        <div class="max-w-4xl mx-auto bg-black rounded-[2rem] md:rounded-[2.5rem] p-6 sm:p-10 md:p-14 text-center relative overflow-hidden shadow-2xl">
+        <div class="max-w-4xl mx-auto bg-gradient-to-br from-yellow-comunidad to-amber-400 rounded-[2rem] md:rounded-[2.5rem] p-6 sm:p-10 md:p-14 text-center relative overflow-hidden shadow-2xl shadow-yellow-200">
             <!-- Glow decorativo -->
-            <div class="absolute -top-10 -right-10 w-40 h-40 bg-yellow-comunidad rounded-full opacity-20 blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-yellow-comunidad rounded-full opacity-10 blur-3xl pointer-events-none"></div>
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full opacity-30 blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-black rounded-full opacity-5 blur-3xl pointer-events-none"></div>
             <!-- Textura de puntos sutil -->
-            <div class="absolute inset-0 opacity-[0.07] pointer-events-none" style="background-image: radial-gradient(circle, #ffffff 1px, transparent 1px); background-size: 18px 18px;"></div>
+            <div class="absolute inset-0 opacity-[0.06] pointer-events-none" style="background-image: radial-gradient(circle, #000000 1px, transparent 1px); background-size: 18px 18px;"></div>
 
             <div class="relative z-10">
                 <!-- Badge -->
-                <div class="inline-flex items-center gap-2 bg-white/10 border border-white/10 rounded-full px-4 py-1.5 mb-5 backdrop-blur-sm">
+                <div class="inline-flex items-center gap-2 bg-black/10 border border-black/10 rounded-full px-4 py-1.5 mb-5">
                     <span class="relative flex h-2 w-2">
-                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-comunidad opacity-75"></span>
-                        <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-comunidad"></span>
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-black opacity-60"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-black"></span>
                     </span>
-                    <span class="text-yellow-comunidad text-[11px] sm:text-xs font-bold uppercase tracking-widest">Abierto las 24 hs</span>
+                    <span class="text-black text-[11px] sm:text-xs font-black uppercase tracking-widest">Abierto las 24 hs</span>
                 </div>
 
-                <div class="w-16 h-16 md:w-20 md:h-20 bg-yellow-comunidad rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-yellow-comunidad/20 transform -rotate-3">
-                    <i class="fas fa-bag-shopping text-black text-2xl md:text-3xl"></i>
+                <div class="w-16 h-16 md:w-20 md:h-20 bg-black rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-black/20 transform -rotate-3">
+                    <i class="fas fa-bag-shopping text-yellow-comunidad text-2xl md:text-3xl"></i>
                 </div>
 
-                <h2 class="text-3xl sm:text-3xl md:text-4xl font-black text-white mb-4 leading-tight">
-                    Descubrí <span class="text-yellow-comunidad">Comunidad Place</span>
+                <h2 class="text-3xl sm:text-3xl md:text-4xl font-black text-black mb-4 leading-tight">
+                    Comunidad Emprendedora<br class="hidden sm:block"> tu mercado virtual
                 </h2>
-                <p class="text-slate-300 text-sm sm:text-base md:text-lg max-w-xl mx-auto mb-8 leading-relaxed">
-                    Nuestro marketplace online, donde podés encontrar y comprarle directo a los emprendedores y comercios de la comunidad, las 24 horas del día.
+                <p class="text-black/70 text-sm sm:text-base md:text-lg max-w-xl mx-auto mb-8 leading-relaxed font-semibold">
+                    Encontrá y comprale directo a los emprendedores y comercios de la comunidad, las 24 horas del día, desde donde estés.
                 </p>
 
                 <!-- Mini features -->
-                <div class="grid grid-cols-3 gap-2 sm:gap-4 max-w-md mx-auto mb-9 text-left sm:text-center">
-                    <div class="flex sm:flex-col items-center gap-2 sm:gap-1.5 bg-white/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
-                        <i class="fas fa-store text-yellow-comunidad text-base sm:text-lg"></i>
-                        <span class="text-slate-300 text-[11px] sm:text-xs font-semibold leading-tight">Emprendedores locales</span>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 max-w-md mx-auto mb-9 text-left sm:text-center">
+                    <div class="flex sm:flex-col items-center gap-3 sm:gap-1.5 bg-black/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
+                        <i class="fas fa-store text-black text-base sm:text-lg w-5 flex-shrink-0 text-center"></i>
+                        <span class="text-black/70 text-xs font-bold leading-snug">Emprendedores locales</span>
                     </div>
-                    <div class="flex sm:flex-col items-center gap-2 sm:gap-1.5 bg-white/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
-                        <i class="fas fa-shield-heart text-yellow-comunidad text-base sm:text-lg"></i>
-                        <span class="text-slate-300 text-[11px] sm:text-xs font-semibold leading-tight">Compra directa y segura</span>
+                    <div class="flex sm:flex-col items-center gap-3 sm:gap-1.5 bg-black/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
+                        <i class="fas fa-shield-heart text-black text-base sm:text-lg w-5 flex-shrink-0 text-center"></i>
+                        <span class="text-black/70 text-xs font-bold leading-snug">Compra directa y segura</span>
                     </div>
-                    <div class="flex sm:flex-col items-center gap-2 sm:gap-1.5 bg-white/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
-                        <i class="fas fa-clock text-yellow-comunidad text-base sm:text-lg"></i>
-                        <span class="text-slate-300 text-[11px] sm:text-xs font-semibold leading-tight">Disponible 24/7</span>
+                    <div class="flex sm:flex-col items-center gap-3 sm:gap-1.5 bg-black/5 sm:bg-transparent rounded-xl sm:rounded-none p-3 sm:p-0">
+                        <i class="fas fa-clock text-black text-base sm:text-lg w-5 flex-shrink-0 text-center"></i>
+                        <span class="text-black/70 text-xs font-bold leading-snug">Disponible 24/7</span>
                     </div>
                 </div>
 
-                <!-- Reemplazá la URL por la de Comunidad Place -->
+                <!-- Reemplazá la URL por la de Comunidad Emprendedora, tu mercado virtual -->
                 <a href="https://comunidademprendedora.com.ar/" target="_blank" rel="noopener"
-                   class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-yellow-comunidad text-black font-black py-4 px-10 rounded-full hover:bg-yellow-500 active:scale-95 transition shadow-xl shadow-yellow-comunidad/10 uppercase text-sm tracking-wide">
-                    <i class="fas fa-arrow-up-right-from-square"></i> Ir a Comunidad Place
+                   class="w-full sm:w-auto max-w-xs sm:max-w-none mx-auto inline-flex items-center justify-center gap-2 bg-black text-yellow-comunidad font-black py-4 px-8 sm:px-10 rounded-full hover:bg-slate-900 active:scale-95 transition shadow-xl shadow-black/20 uppercase text-xs sm:text-sm tracking-wide">
+                    <i class="fas fa-arrow-up-right-from-square"></i> Ir al mercado virtual
                 </a>
             </div>
         </div>
     </div>
 </section>
-  <footer class="bg-slate-900 text-white pt-16 pb-8">
+  <footer class="bg-black text-white pt-16 pb-8">
         <div class="container mx-auto px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-12 text-center md:text-left">
             <div>
                 <h3 class="text-2xl font-black mb-4">COMUNIDAD <span class="text-yellow-comunidad uppercase">Emprendedora</span></h3>
@@ -558,7 +563,7 @@
                 <h4 class="font-bold mb-4 uppercase text-yellow-comunidad text-xs tracking-widest">Contacto</h4>
                 <div class="flex justify-center md:justify-start gap-6 text-2xl">
                     <a href="https://www.instagram.com/comunidademprendedorava/" class="hover:text-yellow-comunidad transition"><i class="fab fa-instagram"></i></a>
-                    <a href="#" class="hover:text-yellow-comunidad transition"><i class="fab fa-whatsapp"></i></a>
+                    <a href="https://wa.me/5493735533008" target="_blank" rel="noopener" class="hover:text-yellow-comunidad transition"><i class="fab fa-whatsapp"></i></a>
                     <a href="mailto:comunidademprendedorava@gmail.com" class="hover:text-yellow-comunidad transition"><i class="fas fa-envelope"></i></a>
                 </div>
             </div>
@@ -608,6 +613,65 @@
     <button onclick="cambiarFoto(1)" class="absolute right-4 z-[260] text-white/50 hover:text-yellow-comunidad text-4xl p-4 transition-colors">
         <i class="fas fa-chevron-right"></i>
     </button>
+</div>
+</div>
+
+<div id="modal-comercio" class="fixed inset-0 z-[220] hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-[2rem] overflow-hidden shadow-2xl relative p-8 md:p-10 text-center">
+        <button onclick="cerrarComercio()" class="absolute top-4 right-4 z-20 bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-200 transition">
+            <i class="fas fa-times text-slate-800"></i>
+        </button>
+
+        <img id="comercio-logo" src="" class="w-24 h-24 md:w-28 md:h-28 mx-auto rounded-full border-4 border-slate-800 object-cover bg-slate-100 mb-5 shadow-md" alt="">
+
+        <h3 id="comercio-nombre" class="text-xl md:text-2xl font-black mb-1"></h3>
+        <span id="comercio-categoria" class="text-xs uppercase tracking-widest text-slate-400 font-bold"></span>
+
+        <div id="comercio-redes" class="flex items-center justify-center gap-3 mt-5 hidden">
+            <a id="comercio-whatsapp" href="#" target="_blank" rel="noopener" class="hidden w-11 h-11 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-md transition">
+                <i class="fab fa-whatsapp text-lg"></i>
+            </a>
+            <a id="comercio-instagram" href="#" target="_blank" rel="noopener" class="hidden w-11 h-11 rounded-full text-white flex items-center justify-center shadow-md transition hover:opacity-90" style="background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);">
+                <i class="fab fa-instagram text-lg"></i>
+            </a>
+        </div>
+
+        <div id="comercio-descuento-wrap" class="mt-6 bg-yellow-50 border border-yellow-comunidad/40 rounded-2xl p-5 text-left hidden">
+            <p class="text-[10px] uppercase font-black tracking-widest text-yellow-600 mb-2 flex items-center gap-2">
+                <i class="fas fa-tag"></i> Beneficio para emprendedores
+            </p>
+            <p id="comercio-descuento" class="text-slate-700 text-sm leading-relaxed whitespace-pre-line"></p>
+        </div>
+
+        <p class="mt-5 text-xs text-slate-500 font-semibold flex items-center justify-center gap-2">
+            <i class="fas fa-id-card"></i> Presenta en el comercio tu credencial digital
+        </p>
+    </div>
+</div>
+
+<div id="modal-emprendedor" class="fixed inset-0 z-[220] hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-[2rem] overflow-hidden shadow-2xl relative p-8 md:p-10 text-center">
+        <button onclick="cerrarEmprendedor()" class="absolute top-4 right-4 z-20 bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-200 transition">
+            <i class="fas fa-times text-slate-800"></i>
+        </button>
+
+        <img id="emprendedor-logo" src="" class="w-24 h-24 md:w-28 md:h-28 mx-auto rounded-full border-4 border-yellow-comunidad object-cover bg-slate-100 mb-5 shadow-md" alt="">
+
+        <h3 id="emprendedor-nombre" class="text-xl md:text-2xl font-black mb-1"></h3>
+        <span id="emprendedor-categoria" class="text-xs uppercase tracking-widest text-slate-400 font-bold"></span>
+
+        <div id="emprendedor-redes" class="flex items-center justify-center gap-3 mt-5 hidden">
+            <a id="emprendedor-whatsapp" href="#" target="_blank" rel="noopener" class="hidden w-11 h-11 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-md transition">
+                <i class="fab fa-whatsapp text-lg"></i>
+            </a>
+            <a id="emprendedor-instagram" href="#" target="_blank" rel="noopener" class="hidden w-11 h-11 rounded-full text-white flex items-center justify-center shadow-md transition hover:opacity-90" style="background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);">
+                <i class="fab fa-instagram text-lg"></i>
+            </a>
+            <a id="emprendedor-web" href="#" target="_blank" rel="noopener" class="hidden w-11 h-11 rounded-full bg-slate-800 hover:bg-slate-900 text-white flex items-center justify-center shadow-md transition">
+                <i class="fas fa-globe text-lg"></i>
+            </a>
+        </div>
+    </div>
 </div>
 
 <script src="site-data.js"></script>
