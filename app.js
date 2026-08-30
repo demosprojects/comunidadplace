@@ -165,10 +165,169 @@ function cerrarMapa() {
     }
 }
 
+// 7.5 MODAL DE DETALLE DE COMERCIO (logo, categoría y descuento)
+// Los datos ya están en memoria (window.__comerciosData, llenado por
+// site-data.js), así que abrir el modal es instantáneo, sin ir a Firestore.
+function abrirComercio(index) {
+    const datos = window.__comerciosData || [];
+    const c = datos[index];
+    const modal = document.getElementById('modal-comercio');
+    if (!modal || !c) return;
+
+    document.getElementById('comercio-logo').src = c.logoUrl || '';
+    document.getElementById('comercio-nombre').textContent = c.nombre || '';
+    document.getElementById('comercio-categoria').textContent = c.categoria || '';
+
+    // Redes: WhatsApp e Instagram son opcionales, cada uno se muestra
+    // solo si el comercio tiene ese dato cargado desde el admin.
+    const redesWrap = document.getElementById('comercio-redes');
+    const btnWhatsapp = document.getElementById('comercio-whatsapp');
+    const btnInstagram = document.getElementById('comercio-instagram');
+
+    const whatsapp = (c.whatsapp || '').trim();
+    if (whatsapp) {
+        const soloNumeros = whatsapp.replace(/\D/g, '');
+        // WhatsApp para celulares argentinos necesita el prefijo 549 antes
+        // del número de área. Si el usuario ya cargó el 54 o el 549 al
+        // principio, lo sacamos primero para no duplicarlo.
+        const numeroLimpio = soloNumeros.replace(/^549?/, '');
+        btnWhatsapp.href = `https://wa.me/549${numeroLimpio}`;
+        btnWhatsapp.classList.remove('hidden');
+    } else {
+        btnWhatsapp.classList.add('hidden');
+    }
+
+    const instagram = (c.instagram || '').trim();
+    if (instagram) {
+        let url = instagram;
+        if (!/^https?:\/\//i.test(url)) {
+            const usuario = url.replace(/^@/, '');
+            url = `https://instagram.com/${usuario}`;
+        }
+        btnInstagram.href = url;
+        btnInstagram.classList.remove('hidden');
+    } else {
+        btnInstagram.classList.add('hidden');
+    }
+
+    redesWrap.classList.toggle('hidden', !whatsapp && !instagram);
+
+    const descuentoWrap = document.getElementById('comercio-descuento-wrap');
+    const descuentoTexto = document.getElementById('comercio-descuento');
+    if (c.descuento && c.descuento.trim().length > 0) {
+        descuentoTexto.textContent = c.descuento;
+        descuentoWrap.classList.remove('hidden');
+    } else {
+        descuentoWrap.classList.add('hidden');
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarComercio() {
+    const modal = document.getElementById('modal-comercio');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// 7.6 MODAL DE DETALLE DE EMPRENDEDOR (logo, categoría, instagram, whatsapp y web)
+// Igual que abrirComercio(), pero leyendo de window.__emprendedoresData
+// (llenado por site-data.js) y sin sección de descuento.
+function abrirEmprendedor(index) {
+    const datos = window.__emprendedoresData || [];
+    const e = datos[index];
+    const modal = document.getElementById('modal-emprendedor');
+    if (!modal || !e) return;
+
+    document.getElementById('emprendedor-logo').src = e.logoUrl || '';
+    document.getElementById('emprendedor-nombre').textContent = e.nombre || '';
+    document.getElementById('emprendedor-categoria').textContent = e.categoria || '';
+
+    // Redes: WhatsApp, Instagram y página web son opcionales, cada uno se
+    // muestra solo si el emprendedor tiene ese dato cargado desde el admin.
+    const redesWrap = document.getElementById('emprendedor-redes');
+    const btnWhatsapp = document.getElementById('emprendedor-whatsapp');
+    const btnInstagram = document.getElementById('emprendedor-instagram');
+    const btnWeb = document.getElementById('emprendedor-web');
+
+    const whatsapp = (e.whatsapp || '').trim();
+    if (whatsapp) {
+        const soloNumeros = whatsapp.replace(/\D/g, '');
+        // WhatsApp para celulares argentinos necesita el prefijo 549 antes
+        // del número de área. Si el usuario ya cargó el 54 o el 549 al
+        // principio, lo sacamos primero para no duplicarlo.
+        const numeroLimpio = soloNumeros.replace(/^549?/, '');
+        btnWhatsapp.href = `https://wa.me/549${numeroLimpio}`;
+        btnWhatsapp.classList.remove('hidden');
+    } else {
+        btnWhatsapp.classList.add('hidden');
+    }
+
+    const instagram = (e.instagram || '').trim();
+    if (instagram) {
+        let url = instagram;
+        if (!/^https?:\/\//i.test(url)) {
+            const usuario = url.replace(/^@/, '');
+            url = `https://instagram.com/${usuario}`;
+        }
+        btnInstagram.href = url;
+        btnInstagram.classList.remove('hidden');
+    } else {
+        btnInstagram.classList.add('hidden');
+    }
+
+    const web = (e.web || '').trim();
+    if (web) {
+        let url = web;
+        if (!/^https?:\/\//i.test(url)) {
+            url = `https://${url}`;
+        }
+        btnWeb.href = url;
+        btnWeb.classList.remove('hidden');
+    } else {
+        btnWeb.classList.add('hidden');
+    }
+
+    redesWrap.classList.toggle('hidden', !whatsapp && !instagram && !web);
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function cerrarEmprendedor() {
+    const modal = document.getElementById('modal-emprendedor');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+window.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('modal-comercio');
+    if (e.key === "Escape" && modal && !modal.classList.contains('hidden')) cerrarComercio();
+    const modalEmprendedor = document.getElementById('modal-emprendedor');
+    if (e.key === "Escape" && modalEmprendedor && !modalEmprendedor.classList.contains('hidden')) cerrarEmprendedor();
+});
+
 window.onclick = function(event) {
     const modal = document.getElementById('modal-mapa');
     if (event.target == modal) {
         cerrarMapa();
+    }
+    const modalComercio = document.getElementById('modal-comercio');
+    if (event.target == modalComercio) {
+        cerrarComercio();
+    }
+    const modalEmprendedor = document.getElementById('modal-emprendedor');
+    if (event.target == modalEmprendedor) {
+        cerrarEmprendedor();
     }
 }
 
