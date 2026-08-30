@@ -1491,7 +1491,7 @@ function actualizarPrecioYWhatsapp() {
 
     const tienda = p.emprendedores ? p.emprendedores.nombre_tienda : '';
     const whatsapp = p.emprendedores ? p.emprendedores.whatsapp : '';
-    let msg = `Hola ${tienda}, vi tu producto "${p.nombre}" en Comunidad Emprendedora Tienda Online y quiero más info!`;
+    let msg = `Hola ${tienda}, vi tu producto "${p.nombre}" en Comunidad Emprendedora tu mercado virtual y quiero más info!`;
     if (detalleVariantes) msg += ` (${detalleVariantes})`;
 
     const linkWhatsapp = document.getElementById('modal-whatsapp');
@@ -2128,7 +2128,7 @@ async function abrirPerfilEmprendedor(emprendedorId) {
 
     const btnWsp = document.getElementById('perfil-whatsapp');
     if (e.whatsapp) {
-        const msg = `Hola ${e.nombre_tienda}, te encontré en Comunidad Emprendedora Tienda Online!`;
+        const msg = `Hola ${e.nombre_tienda}, te encontré en Comunidad Emprendedora tu mercado virtual!`;
         btnWsp.href = `https://wa.me/${e.whatsapp}?text=${encodeURIComponent(msg)}`;
         btnWsp.classList.remove('opacity-40', 'pointer-events-none');
     } else {
@@ -2849,7 +2849,7 @@ async function enviarPedidoWhatsapp() {
     const baseUrl = `${window.location.origin}${window.location.pathname}`;
     const quiereEnvioMsg = carrito.envioSeleccionado !== false;
 
-    let msg = `Hola ${carrito.emprendedorNombre}! Quiero hacer este pedido desde Comunidad Emprendedora Tienda Online:\n\n`;
+    let msg = `Hola ${carrito.emprendedorNombre}! Quiero hacer este pedido desde Comunidad Emprendedora tu mercado virtual:\n\n`;
     if (carrito.costoEnvio > 0) {
         msg += `Modalidad de entrega: ${quiereEnvioMsg ? 'Envío a domicilio' : 'Retiro en el local'}\n\n`;
     }
