@@ -178,15 +178,26 @@ function escucharEmprendedores() {
             return;
         }
 
+        // Guardamos los datos completos (incluye instagram, whatsapp y web)
+        // en un array global para que abrirEmprendedor(index), en app.js,
+        // pueda mostrarlos en el modal sin tener que ir a buscarlos de
+        // nuevo a Firestore.
+        window.__emprendedoresData = snap.docs.map(doc => doc.data());
+
         // Importante: acá se pinta el set "original" (sin duplicar). La
         // duplicación para el efecto de scroll infinito la hace
         // iniciarCarruselInfinito() en app.js.
-        container.innerHTML = snap.docs.map(doc => {
+        container.innerHTML = snap.docs.map((doc, i) => {
             const e = doc.data();
             return `
-                <div class="flex-none w-36 md:w-40">
-                    <div class="w-28 h-28 md:w-32 md:h-32 mx-auto rounded-full border-4 border-yellow-comunidad p-1 mb-4 shadow-md">
-                        <img src="${escaparHtml(e.logoUrl)}" class="w-full h-full object-cover rounded-full bg-slate-100" alt="${escaparHtml(e.nombre)}">
+                <div class="flex-none w-36 md:w-40 cursor-pointer pointer-events-auto" onclick="abrirEmprendedor(${i})">
+                    <div class="relative w-28 h-28 md:w-32 md:h-32 mx-auto mb-4 group">
+                        <div class="w-full h-full rounded-full border-4 border-yellow-comunidad p-1 shadow-md transition-transform duration-300 group-hover:scale-105">
+                            <img src="${escaparHtml(e.logoUrl)}" class="w-full h-full object-cover rounded-full bg-slate-100" alt="${escaparHtml(e.nombre)}">
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-yellow-comunidad border-2 border-white shadow-md flex items-center justify-center">
+                            <i class="fas fa-info text-black text-[10px]"></i>
+                        </span>
                     </div>
                     <p class="font-bold text-base md:text-lg">${escaparHtml(e.nombre)}</p>
                     <span class="text-xs uppercase tracking-widest text-slate-400">${escaparHtml(e.categoria || '')}</span>
@@ -240,15 +251,25 @@ function escucharComercios() {
             return;
         }
 
+        // Guardamos los datos completos (incluye el descuento) en un array
+        // global para que abrirComercio(index), en app.js, pueda mostrarlos
+        // en el modal sin tener que ir a buscarlos de nuevo a Firestore.
+        window.__comerciosData = snap.docs.map(doc => doc.data());
+
         // Importante: acá se pinta el set "original" (sin duplicar). La
         // duplicación para el efecto de scroll infinito la hace
         // iniciarCarruselInfinito() en app.js.
-        container.innerHTML = snap.docs.map(doc => {
+        container.innerHTML = snap.docs.map((doc, i) => {
             const c = doc.data();
             return `
-                <div class="flex-none w-36 md:w-40">
-                    <div class="w-28 h-28 md:w-32 md:h-32 mx-auto rounded-full border-4 border-slate-800 p-1 mb-4 shadow-md">
-                        <img src="${escaparHtml(c.logoUrl)}" class="w-full h-full object-cover rounded-full bg-slate-100" alt="${escaparHtml(c.nombre)}">
+                <div class="flex-none w-36 md:w-40 cursor-pointer pointer-events-auto" onclick="abrirComercio(${i})">
+                    <div class="relative w-28 h-28 md:w-32 md:h-32 mx-auto mb-4 group">
+                        <div class="w-full h-full rounded-full border-4 border-slate-800 p-1 shadow-md transition-transform duration-300 group-hover:scale-105">
+                            <img src="${escaparHtml(c.logoUrl)}" class="w-full h-full object-cover rounded-full bg-slate-100" alt="${escaparHtml(c.nombre)}">
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-slate-800 border-2 border-white shadow-md flex items-center justify-center">
+                            <i class="fas fa-info text-white text-[10px]"></i>
+                        </span>
                     </div>
                     <p class="font-bold text-base md:text-lg">${escaparHtml(c.nombre)}</p>
                     <span class="text-xs uppercase tracking-widest text-slate-400">${escaparHtml(c.categoria || '')}</span>
