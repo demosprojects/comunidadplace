@@ -124,7 +124,7 @@
     <i class="fas fa-arrow-up"></i>
 </button>
 
-<header class="relative min-h-[600px] lg:min-h-[720px] flex items-center bg-black overflow-hidden py-16 lg:py-20">
+<header class="relative bg-black overflow-hidden">
     <!-- Decoración: puntos y haces dorados, estilo banner -->
     <div class="hero-dots hero-dots--tr"></div>
     <div class="hero-dots hero-dots--bl"></div>
@@ -135,38 +135,48 @@
     <div class="hero-beam hero-beam--5"></div>
     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40"></div>
 
-    <div class="container mx-auto px-6 relative z-10 pb-14 md:pb-16">
-        <div class="flex flex-col lg:flex-row lg:items-center gap-8 lg:gap-0">
-            <div class="lg:pr-10">
-                <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786838227/qferxddoruayigvek9wt.webp" alt="Comunidad Emprendedora" class="h-36 sm:h-44 md:h-56 lg:h-64 w-auto">
+    <div class="container mx-auto px-6 relative z-10 py-12 sm:py-16 lg:py-24">
+        <div class="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-0">
+            <div class="flex flex-col items-center lg:items-start text-center lg:text-left">
+                <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1788055752/sesb3edv3eqstklvv5q1.webp" alt="Comunidad Emprendedora" class="h-24 sm:h-32 md:h-44 lg:h-56 w-auto">
 
-                <p class="text-yellow-comunidad text-2xl sm:text-3xl md:text-4xl font-black mt-4 uppercase tracking-wide leading-tight">Villa Ángela</p>
+                <div class="flex items-center gap-3 mt-3">
+                    <span class="h-px w-8 sm:w-10 bg-yellow-comunidad/60"></span>
+                    <p class="text-yellow-comunidad text-sm sm:text-base md:text-lg lg:text-xl font-black uppercase tracking-[0.2em]">Villa Ángela</p>
+                    <span class="h-px w-8 sm:w-10 bg-yellow-comunidad/60"></span>
+                </div>
             </div>
 
-            <div class="hidden lg:block w-px self-stretch bg-yellow-comunidad/40 mx-2"></div>
+            <div class="hidden lg:block w-px self-stretch bg-yellow-comunidad/40 mx-12"></div>
+            <div class="lg:hidden w-16 h-px bg-yellow-comunidad/40 mx-auto my-6"></div>
 
-            <div class="lg:pl-10 lg:max-w-md">
-                <p class="text-yellow-comunidad text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-wide leading-[1.1] text-stroke-yellow">
-                    Fundación<br>Transformando<br>Realidades
+            <div class="lg:pl-2 lg:max-w-md text-center lg:text-left">
+                <p class="text-white font-black italic uppercase leading-tight text-xl sm:text-2xl md:text-3xl lg:text-4xl">
+                    Ideas que inspiran.<br>
+                    Acciones que <span class="text-yellow-comunidad">transforman.</span>
                 </p>
-                <div class="w-16 h-px bg-yellow-comunidad/60 my-4"></div>
-                <p class="text-white/90 text-base md:text-lg leading-relaxed">
-                    Impulsamos el desarrollo y las oportunidades de nuestra comunidad.
+                <div class="w-12 h-px bg-yellow-comunidad/70 my-4 mx-auto lg:mx-0"></div>
+                <p class="text-white/80 text-sm sm:text-base leading-relaxed">
+                    Conectamos personas, impulsamos talentos y potenciamos proyectos para construir una comunidad que genera <span class="text-yellow-comunidad font-semibold">impacto real</span>.
                 </p>
             </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-4 mt-8">
-            <button id="btn-feria" class="w-full sm:w-auto bg-yellow-comunidad text-black font-bold py-4 px-8 rounded-full hover:bg-yellow-500 transition flex items-center justify-center gap-2 shadow-lg">
+        <div class="flex flex-wrap gap-3 mt-10 justify-center lg:justify-start">
+            <button id="btn-feria" class="inline-flex items-center justify-center gap-2 bg-yellow-comunidad text-black font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full hover:bg-yellow-500 transition shadow-lg">
                 <i class="fas fa-map-marker-alt"></i> Ver próximos eventos
             </button>
-            <button id="btn-participar" class="w-full sm:w-auto bg-white text-black font-bold py-4 px-8 rounded-full hover:bg-slate-100 transition flex items-center justify-center gap-2 shadow-lg">
+            <button id="btn-participar" class="inline-flex items-center justify-center gap-2 bg-white text-black font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full hover:bg-slate-100 transition shadow-lg">
                 <i class="far fa-edit"></i> Quiero participar
             </button>
             <!-- Reemplazá la URL por la de Comunidad Place -->
             <a id="btn-comunidad-place" href="https://comunidademprendedora.com.ar/" target="_blank" rel="noopener"
-               class="w-full sm:w-auto bg-black text-white font-bold py-4 px-8 rounded-full hover:bg-slate-800 transition flex items-center justify-center gap-2 shadow-lg border border-white/10">
-                <i class="fas fa-bag-shopping text-yellow-comunidad"></i> Ir a Comunidad Place
+               class="inline-flex items-center justify-center gap-2 bg-black text-white font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full hover:bg-slate-800 transition shadow-lg border border-white/10">
+                <i class="fas fa-bag-shopping text-yellow-comunidad"></i> Ir al mercado virtual
+            </a>
+            <a id="btn-descuentos" href="#comercios"
+               class="inline-flex items-center justify-center gap-2 bg-transparent text-yellow-comunidad font-bold text-xs sm:text-sm py-2.5 px-5 rounded-full hover:bg-yellow-comunidad hover:text-black transition shadow-lg border border-yellow-comunidad/60">
+                <i class="fas fa-tags"></i> Descuentos para emprendedores
             </a>
         </div>
     </div>
@@ -180,31 +190,68 @@
     </div>
 </header>
 
-<section class="py-16 md:py-24 bg-white">
-    <div class="container mx-auto px-6 text-center max-w-4xl">
-        <div class="mb-8 flex justify-center">
-            <div class="w-20 h-20 bg-yellow-100 rounded-2xl flex items-center justify-center transform rotate-3 shadow-sm">
-                <i class="fas fa-university text-yellow-600 text-3xl"></i>
+<section class="py-16 md:py-24 bg-white overflow-hidden">
+    <div class="container mx-auto px-6 max-w-5xl">
+        <div class="text-center mb-10 md:mb-14">
+            <div class="mb-8 flex justify-center">
+                <div class="w-20 h-20 bg-yellow-100 rounded-2xl flex items-center justify-center transform rotate-3 shadow-sm">
+                    <i class="fas fa-university text-yellow-600 text-3xl"></i>
+                </div>
+            </div>
+
+            <h2 class="text-3xl md:text-4xl font-black mb-6"><span class="text-yellow-500">¿Quienes somos?</span></h2>
+
+            <p class="text-slate-700 text-base md:text-lg leading-relaxed max-w-2xl mx-auto">
+                Comunidad Emprendedora es un espacio de encuentro, acompañamiento, formación y vinculación para personas, emprendimientos, comercios, PyMEs y organizaciones de Villa Ángela y la región. A través de nuestra incubadora, ferias, capacitaciones, espacios de comercialización, promoción y proyectos, buscamos fortalecer iniciativas, generar oportunidades, promover el comercio local y conectar a quienes producen, crean, ofrecen servicios y generan empleo.
+            </p>
+        </div>
+
+        <!-- Frase destacada -->
+        <div class="bg-slate-50 border-l-4 border-yellow-comunidad rounded-2xl md:rounded-3xl p-6 md:p-8 mb-10 md:mb-14 max-w-3xl mx-auto">
+            <p class="text-slate-900 font-black text-xl md:text-2xl leading-snug">
+                "No somos solamente una feria: somos un ecosistema de desarrollo local."
+            </p>
+            <p class="text-slate-500 text-sm md:text-base leading-relaxed mt-3">
+                Queremos acompañar todo el camino: desde una idea que recién comienza, pasando por un emprendimiento en crecimiento, hasta una PyME o empresa que busca consolidarse, innovar y generar impacto en nuestro territorio. Porque no importa dónde estés en el camino: hay un lugar para crecer.
+            </p>
+        </div>
+
+        <!-- Qué hacemos -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 md:gap-6 mb-10 md:mb-14">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                <div class="w-11 h-11 bg-yellow-100 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-graduation-cap text-yellow-600 text-lg"></i>
+                </div>
+                <h3 class="font-bold text-slate-900">Incubadora y capacitaciones</h3>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                <div class="w-11 h-11 bg-yellow-100 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-store text-yellow-600 text-lg"></i>
+                </div>
+                <h3 class="font-bold text-slate-900">Ferias y comercialización</h3>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+                <div class="w-11 h-11 bg-yellow-100 rounded-xl flex items-center justify-center mb-4">
+                    <i class="fas fa-people-arrows text-yellow-600 text-lg"></i>
+                </div>
+                <h3 class="font-bold text-slate-900">Promoción y vinculación</h3>
             </div>
         </div>
-        
-        <h2 class="text-3xl md:text-4xl font-black mb-8"><span class="text-yellow-500">¿Quienes somos?</span></h2>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 text-left">
-            <div class="space-y-4">
-                <p class="text-slate-700 text-lg leading-relaxed">
-                    Comunidad Emprendedora es un espacio pensado para acompañar a emprendedores de Villa Ángela y la zona, dándoles un lugar real donde mostrar y vender lo que hacen. Organizamos ferias periódicas, sumamos visibilidad a cada marca y construimos una red de apoyo entre quienes eligen emprender.
-                </p>
-                <p class="text-slate-600">
-                   Nuestro objetivo es fortalecer el comercio local, generar oportunidades de venta directa y ayudar a que cada emprendimiento gane presencia, tanto en la feria como en nuestras redes.
-                </p>
+
+        <!-- Destinatarios -->
+        <div class="bg-slate-50 rounded-2xl md:rounded-3xl p-6 md:p-8 max-w-3xl mx-auto">
+            <h4 class="font-bold text-slate-900 mb-4 uppercase text-xs tracking-widest text-center">Impacto y Destinatarios</h4>
+            <div class="flex flex-wrap justify-center gap-2 mb-5">
+                <span class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs md:text-sm font-semibold px-4 py-2 rounded-full">Personas emprendedoras</span>
+                <span class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs md:text-sm font-semibold px-4 py-2 rounded-full">Artesanos</span>
+                <span class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs md:text-sm font-semibold px-4 py-2 rounded-full">Productores</span>
+                <span class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs md:text-sm font-semibold px-4 py-2 rounded-full">Comercios</span>
+                <span class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs md:text-sm font-semibold px-4 py-2 rounded-full">PyMEs</span>
+                <span class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs md:text-sm font-semibold px-4 py-2 rounded-full">Proyectos</span>
             </div>
-            <div class="bg-slate-50 p-6 rounded-3xl border-l-4 border-yellow-comunidad">
-                <h4 class="font-bold text-slate-900 mb-2 uppercase text-xs tracking-widest">Impacto y Destinatarios</h4>
-                <p class="text-slate-600 text-sm leading-relaxed">
-                   Está pensado para emprendedores, artesanos y pequeños productores de Villa Ángela y alrededores que quieran sumarse a la comunidad y participar de las ferias.
-                </p>
-            </div>
+            <p class="text-slate-600 text-sm md:text-base leading-relaxed">
+                Está pensado para personas emprendedoras, artesanos, productores, comercios, PyMEs y proyectos que quieran crecer y fortalecer su actividad, brindándoles un espacio de acompañamiento, capacitación, visibilidad, comercialización y vinculación. La propuesta busca incluir tanto a quienes están dando sus primeros pasos como a quienes ya tienen un negocio en marcha y buscan nuevas oportunidades para seguir creciendo.
+            </p>
         </div>
     </div>
 </section>
@@ -223,7 +270,7 @@
         <div class="flex flex-col items-center gap-6">
             <div class="flex flex-col items-center gap-3">
                 <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Escribinos directo</p>
-                <div class="flex items-center gap-4">
+                <div class="flex flex-wrap items-center justify-center gap-4">
                     <!-- Reemplazá el número por el real, con código de país (Ej: 5493735123456) -->
                     <a href="https://wa.me/NUMERO_WHATSAPP" target="_blank" rel="noopener"
                        class="group flex items-center gap-3 bg-white border border-slate-200 hover:border-transparent hover:bg-[#25D366] rounded-full pl-3 pr-5 py-3 shadow-sm hover:shadow-lg transition-all">
@@ -240,6 +287,14 @@
                             <i class="fab fa-instagram text-white text-lg"></i>
                         </span>
                         <span class="font-bold text-sm text-slate-700 transition-colors">Instagram</span>
+                    </a>
+
+                    <a href="mailto:comunidademprendedorava@gmail.com" target="_blank" rel="noopener"
+                       class="group flex items-center gap-3 bg-white border border-slate-200 hover:border-transparent hover:bg-[#EA4335] rounded-full pl-3 pr-5 py-3 shadow-sm hover:shadow-lg transition-all">
+                        <span class="w-9 h-9 rounded-full bg-[#EA4335]/10 group-hover:bg-white/20 flex items-center justify-center flex-shrink-0 transition-colors">
+                            <i class="fas fa-envelope text-[#EA4335] group-hover:text-white text-lg transition-colors"></i>
+                        </span>
+                        <span class="font-bold text-sm text-slate-700 group-hover:text-white transition-colors">Gmail</span>
                     </a>
                 </div>
             </div>
@@ -401,7 +456,7 @@
     </div>
 </section>
 
-<section class="py-16 md:py-24 bg-slate-50 overflow-hidden text-center">
+<section id="comercios" class="py-16 md:py-24 bg-slate-50 overflow-hidden text-center scroll-mt-24">
     <div class="container mx-auto px-6">
         <h2 class="text-2xl md:text-3xl font-black mb-2">Comercios adheridos</h2>
         <p class="text-slate-400 uppercase tracking-widest text-xs font-bold mb-12">Comercios que apoyan a la comunidad</p>
@@ -504,6 +559,7 @@
                 <div class="flex justify-center md:justify-start gap-6 text-2xl">
                     <a href="https://www.instagram.com/comunidademprendedorava/" class="hover:text-yellow-comunidad transition"><i class="fab fa-instagram"></i></a>
                     <a href="#" class="hover:text-yellow-comunidad transition"><i class="fab fa-whatsapp"></i></a>
+                    <a href="mailto:comunidademprendedorava@gmail.com" class="hover:text-yellow-comunidad transition"><i class="fas fa-envelope"></i></a>
                 </div>
             </div>
         </div>
