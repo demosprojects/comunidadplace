@@ -15,21 +15,70 @@ function escaparHtml(texto) {
     return div.innerHTML;
 }
 
+/* ---------- OPTIMIZACIÓN DE IMÁGENES DE LOS LOGOS ----------
+   Antes los logos se pedían en su tamaño y peso originales (a veces varios
+   MB), aunque en la web se muestran en círculos chiquitos de ~130px. Eso es
+   lo que los hacía tardar tanto en conexiones móviles.
+
+   Los emprendedores/comercios cargan el logo de dos formas: subiendo el
+   archivo (queda en Cloudinary, res.cloudinary.com) o pegando un link
+   externo (por ejemplo de ibb.co). Para el caso de Cloudinary, alcanza con
+   insertar los parámetros de tamaño/calidad en la URL. Para un link externo
+   no podemos pedirle a ibb.co que nos dé una versión optimizada, pero sí
+   podemos usar el modo "fetch" de nuestra propia cuenta de Cloudinary: le
+   pasamos la URL externa, Cloudinary la trae, la redimensiona/comprime y
+   nos devuelve esa versión ya optimizada (quedando ella cacheada ahí, sin
+   tocar el archivo original ni el ibb.co del emprendedor). */
+const CLOUDINARY_CLOUD = 'dloroyhev';
+
+function logoOptimizado(url, ladoPx = 200) {
+    if (!url || typeof url !== 'string') return url;
+    const transformacion = `w_${ladoPx},h_${ladoPx},c_fill,g_auto,q_auto,f_auto`;
+
+    const marcadorUpload = '/upload/';
+    const idxUpload = url.indexOf(marcadorUpload);
+    if (url.includes('res.cloudinary.com') && idxUpload !== -1) {
+        // Ya es un archivo nuestro en Cloudinary: insertamos la transformación.
+        return url.slice(0, idxUpload + marcadorUpload.length) + transformacion + '/' + url.slice(idxUpload + marcadorUpload.length);
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        // Link externo (ibb.co u otro): lo hacemos pasar por Cloudinary en
+        // modo "fetch" para que también quede optimizado.
+        return `https://res.cloudinary.com/${CLOUDINARY_CLOUD}/image/fetch/${transformacion}/${encodeURIComponent(url)}`;
+    }
+
+    return url;
+}
+
 /* ---------- LOADER PARA LOGOS (mientras carga el servidor de imágenes) ----------
    Nuestro servidor de imágenes puede tardar en responder, sobre todo en
    conexiones móviles. En vez de dejar el círculo en blanco hasta que la
    imagen esté lista, mostramos un "skeleton" animado (mismo estilo que ya
    usa el resto del sitio) y recién mostramos la imagen real cuando terminó
-   de cargar (evento onload). Si la imagen falla (onerror), sacamos el
-   skeleton igual y dejamos un ícono genérico para que no quede roto. */
+   de cargar (evento onload).
+
+   Si la versión OPTIMIZADA falla (por ejemplo porque el modo "fetch" de
+   Cloudinary no está habilitado para links externos como los de ibb.co),
+   reintentamos una sola vez con la URL ORIGINAL sin optimizar, para no
+   perder el logo. Solo si esa segunda carga también falla mostramos el
+   ícono genérico. */
 function imgConLoader(url, alt, imgClass) {
-    const urlEscapada = escaparHtml(url);
+    const urlOriginalEscapada = escaparHtml(url || '');
+    const urlOptimizadaEscapada = escaparHtml(logoOptimizado(url));
     const altEscapado = escaparHtml(alt);
     return `
         <div class="skeleton w-full h-full rounded-full flex items-center justify-center">
-            <img src="${urlEscapada}" alt="${altEscapado}" class="${imgClass} opacity-0 transition-opacity duration-500"
+            <img src="${urlOptimizadaEscapada}" alt="${altEscapado}" class="${imgClass} opacity-0 transition-opacity duration-500"
+                 data-original="${urlOriginalEscapada}"
                  onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('skeleton');"
-                 onerror="this.parentElement.classList.remove('skeleton'); this.classList.remove('opacity-0'); this.parentElement.innerHTML='<i class=\\'fas fa-store text-slate-300 text-2xl\\'></i>';">
+                 onerror="
+                    if (this.dataset.original && this.src !== this.dataset.original) {
+                        this.onerror = function() { this.parentElement.classList.remove('skeleton'); this.classList.remove('opacity-0'); this.parentElement.innerHTML='<i class=\\'fas fa-store text-slate-300 text-2xl\\'></i>'; };
+                        this.src = this.dataset.original;
+                    } else {
+                        this.parentElement.classList.remove('skeleton'); this.classList.remove('opacity-0'); this.parentElement.innerHTML='<i class=\\'fas fa-store text-slate-300 text-2xl\\'></i>';
+                    }">
         </div>`;
 }
 
