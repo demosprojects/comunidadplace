@@ -95,22 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // 5. EFECTO DE REVELACIÓN AL HACER SCROLL
-    const revealOnScroll = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = "1";
-                entry.target.style.transform = "translateY(0)";
-            }
-        });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('section').forEach(section => {
-        section.style.opacity = "0";
-        section.style.transform = "translateY(20px)";
-        section.style.transition = "all 0.6s ease-out";
-        revealOnScroll.observe(section);
-    });
+    // 5. (Antes acá había un efecto que ocultaba cada sección (opacity 0) hasta
+    // que el usuario la hacía aparecer scrolleando. Se sacó: ahora todo el
+    // contenido está visible de entrada, sin depender del scroll.)
 
     // 6. LÓGICA DEL CARRUSEL DE GALERÍA DE FOTOS
     const galleryContainer = document.getElementById('gallery-container');
