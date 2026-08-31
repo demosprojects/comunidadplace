@@ -1,5 +1,42 @@
 document.addEventListener('DOMContentLoaded', () => {
-    
+
+    // 0. CORRECCIÓN DE SCROLL PARA LINKS DIRECTOS A UNA SECCIÓN (ej. #comercios)
+    // Las secciones de arriba (galería, ferias, emprendedores, testimonios) se
+    // llenan con datos de Firestore en tiempo real y sin orden garantizado. Si
+    // alguien entra con un link directo a una sección más abajo (ej. desde el
+    // botón "Beneficios" del dashboard de emprendedores), el navegador hace el
+    // scroll al ancla ANTES de que ese contenido termine de cargar; a medida
+    // que va llegando, la página crece por arriba y la sección objetivo se
+    // corre hacia abajo, dando la sensación de que la página "scrollea para
+    // arriba" sola. Acá reintentamos el scroll cada vez que cambia el
+    // contenido de las secciones de arriba, hasta que todo se estabiliza o el
+    // usuario interactúa por su cuenta (ahí dejamos de forzarlo).
+    if (location.hash) {
+        const target = document.getElementById(location.hash.slice(1));
+        if (target) {
+            let activo = true;
+            const reintentarScroll = () => {
+                if (activo) target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            };
+            const observer = new MutationObserver(() => requestAnimationFrame(reintentarScroll));
+            const cancelar = () => { activo = false; observer.disconnect(); };
+
+            ['gallery-container', 'ferias-container', 'carousel-container', 'testimonios-container', 'comercios-container']
+                .forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) observer.observe(el, { childList: true });
+                });
+
+            // Si el usuario scrollea o toca la pantalla por su cuenta, dejamos
+            // de pelearle el scroll: la corrección era solo para el aterrizaje.
+            window.addEventListener('wheel', cancelar, { once: true, passive: true });
+            window.addEventListener('touchstart', cancelar, { once: true, passive: true });
+
+            reintentarScroll();
+            setTimeout(cancelar, 4000); // corte de seguridad
+        }
+    }
+
     // 1. LÓGICA DEL BOTÓN SCROLL TOP
     const scrollTopBtn = document.getElementById('scroll-top-btn');
     if (scrollTopBtn) {
