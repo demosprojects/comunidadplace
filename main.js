@@ -968,7 +968,7 @@ function crearCardHtmlProducto(p) {
     const logoTienda = p.emprendedores ? p.emprendedores.logo_url : '';
     const inicialTienda = tienda ? tienda.charAt(0).toUpperCase() : '?';
     const avatarTienda = logoTienda
-        ? `<img src="${miniaturaCloudinary(logoTienda, 60)}" alt="${escapeHtml(tienda)}" class="w-4 h-4 sm:w-6 sm:h-6 rounded-full object-cover flex-shrink-0 ring-1 ring-black/5" loading="lazy" decoding="async">`
+        ? `<img src="${miniaturaCloudinary(logoTienda, 60)}" alt="${escapeHtml(tienda)}" width="60" height="60" class="w-4 h-4 sm:w-6 sm:h-6 rounded-full object-cover flex-shrink-0 ring-1 ring-black/5" loading="lazy" decoding="async">`
         : `<span class="w-4 h-4 sm:w-6 sm:h-6 rounded-full bg-yellow-400 text-black text-[7px] sm:text-[10px] font-black flex items-center justify-center flex-shrink-0">${escapeHtml(inicialTienda)}</span>`;
     const descuentoPct = calcularDescuentoPorcentaje(p.precio_anterior, p.precio);
     // `activo === false` = el emprendedor lo pausó por falta de stock. La
@@ -987,7 +987,7 @@ function crearCardHtmlProducto(p) {
     return `
         <div class="group cursor-pointer h-full flex flex-col bg-white rounded-md sm:rounded-lg border border-gray-200 hover:shadow-[0_2px_12px_rgba(0,0,0,0.12)] hover:border-gray-300 transition-all duration-200 overflow-hidden animate-fade-in" data-producto-id="${p.id}" data-hash="${hash}" onclick="verDetalles('${p.id}')">
             <div class="relative aspect-square overflow-hidden bg-white flex-shrink-0 flex items-center justify-center">
-                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" class="w-full h-full object-contain p-4 sm:p-6 lg:p-5 transition-transform duration-300 group-hover:scale-[1.03] ${sinStock ? 'grayscale opacity-50' : ''}" loading="lazy" decoding="async">
+                <img src="${miniaturaCloudinary(p.imagen_url, 500)}" alt="${escapeHtml(p.nombre)}" width="500" height="500" class="w-full h-full object-contain p-4 sm:p-6 lg:p-5 transition-transform duration-300 group-hover:scale-[1.03] ${sinStock ? 'grayscale opacity-50' : ''}" loading="lazy" decoding="async">
                 ${sinStock ? `
                 <span class="absolute top-2 left-2 bg-gray-700 text-white text-[8px] sm:text-[9px] font-bold px-2 py-1 rounded uppercase tracking-wide">Sin stock</span>`
                 : (esProductoNuevoVigente(p) ? `
@@ -1886,13 +1886,34 @@ function _lbWheel(e) {
 let _scrollYGuardado = 0;
 let _cantidadModalesAbiertos = 0;
 
+// El truco de position:fixed en el body evita que el scroll "sangre" hacia
+// atrás en iOS Safari, pero en Chrome/Edge de Windows rompe el scroll por
+// gesto de trackpad dentro de los modales (bug conocido de Chromium: con
+// el body en position:fixed, el touchpad deja de poder scrollear divs
+// anidados con overflow-y:auto, aunque la rueda de un mouse externo sí
+// funciona porque dispara un tipo de evento distinto). Por eso el truco
+// completo solo se aplica en iOS/iPadOS, que es la única plataforma que
+// realmente lo necesita; en el resto alcanza con overflow:hidden.
+function _esIOS() {
+    return /iP(hone|ad|od)/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
 function bloquearScrollBody() {
     if (_cantidadModalesAbiertos === 0) {
-        _scrollYGuardado = window.scrollY;
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${_scrollYGuardado}px`;
-        document.body.style.left = '0';
-        document.body.style.right = '0';
+        if (_esIOS()) {
+            _scrollYGuardado = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${_scrollYGuardado}px`;
+            document.body.style.left = '0';
+            document.body.style.right = '0';
+        }
+        // Se bloquea tanto <html> como <body>: en modo estándar el elemento
+        // que realmente scrollea la página es <html> (documentElement), no
+        // <body>. Bloquear solo body deja un "scroll exterior" fantasma
+        // detrás de los modales (se nota sobre todo en desktop con rueda
+        // del mouse fuera del panel).
+        document.documentElement.style.overflow = 'hidden';
         document.body.style.overflow = 'hidden';
         document.body.classList.add('cp-modal-abierto');
     }
@@ -1902,13 +1923,16 @@ function bloquearScrollBody() {
 function desbloquearScrollBody() {
     _cantidadModalesAbiertos = Math.max(0, _cantidadModalesAbiertos - 1);
     if (_cantidadModalesAbiertos === 0) {
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.right = '';
+        if (_esIOS()) {
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.left = '';
+            document.body.style.right = '';
+            window.scrollTo(0, _scrollYGuardado);
+        }
+        document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
         document.body.classList.remove('cp-modal-abierto');
-        window.scrollTo(0, _scrollYGuardado);
     }
 }
 
