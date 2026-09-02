@@ -11,30 +11,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // arriba" sola. Acá reintentamos el scroll cada vez que cambia el
     // contenido de las secciones de arriba, hasta que todo se estabiliza o el
     // usuario interactúa por su cuenta (ahí dejamos de forzarlo).
+    //
+    // Se extrae a una función reutilizable porque el mismo problema pasa con
+    // el botón interno "Descuentos para emprendedores" (href="#comercios"):
+    // el salto nativo del navegador ocurre una sola vez, apenas se hace clic,
+    // así que si en ese momento las secciones de arriba todavía están
+    // cargando, el usuario también termina en un punto incorrecto.
+    const corregirScrollHaciaSeccion = (target) => {
+        if (!target) return;
+        let activo = true;
+        const reintentarScroll = () => {
+            if (activo) target.scrollIntoView({ behavior: 'auto', block: 'start' });
+        };
+        const observer = new MutationObserver(() => requestAnimationFrame(reintentarScroll));
+        const cancelar = () => { activo = false; observer.disconnect(); };
+
+        ['gallery-container', 'ferias-container', 'carousel-container', 'testimonios-container', 'comercios-container']
+            .forEach(id => {
+                const el = document.getElementById(id);
+                if (el) observer.observe(el, { childList: true });
+            });
+
+        // Si el usuario scrollea o toca la pantalla por su cuenta, dejamos
+        // de pelearle el scroll: la corrección era solo para el aterrizaje.
+        window.addEventListener('wheel', cancelar, { once: true, passive: true });
+        window.addEventListener('touchstart', cancelar, { once: true, passive: true });
+
+        reintentarScroll();
+        setTimeout(cancelar, 4000); // corte de seguridad
+    };
+
+    // 0.a Aterrizaje directo con hash en la URL (ej. link externo del dashboard)
     if (location.hash) {
         const target = document.getElementById(location.hash.slice(1));
-        if (target) {
-            let activo = true;
-            const reintentarScroll = () => {
-                if (activo) target.scrollIntoView({ behavior: 'auto', block: 'start' });
-            };
-            const observer = new MutationObserver(() => requestAnimationFrame(reintentarScroll));
-            const cancelar = () => { activo = false; observer.disconnect(); };
+        if (target) corregirScrollHaciaSeccion(target);
+    }
 
-            ['gallery-container', 'ferias-container', 'carousel-container', 'testimonios-container', 'comercios-container']
-                .forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) observer.observe(el, { childList: true });
-                });
-
-            // Si el usuario scrollea o toca la pantalla por su cuenta, dejamos
-            // de pelearle el scroll: la corrección era solo para el aterrizaje.
-            window.addEventListener('wheel', cancelar, { once: true, passive: true });
-            window.addEventListener('touchstart', cancelar, { once: true, passive: true });
-
-            reintentarScroll();
-            setTimeout(cancelar, 4000); // corte de seguridad
-        }
+    // 0.b Clic en el botón interno "Descuentos para emprendedores" (#comercios)
+    // estando ya parado en la página. Frenamos el salto nativo del navegador
+    // (que se dispara una sola vez, antes de que termine de cargar el
+    // contenido de arriba) y hacemos nosotros el scroll con reintento.
+    const btnDescuentos = document.getElementById('btn-descuentos');
+    if (btnDescuentos) {
+        btnDescuentos.addEventListener('click', (e) => {
+            const targetId = btnDescuentos.getAttribute('href').slice(1);
+            const target = document.getElementById(targetId);
+            if (!target) return; // sin target, dejamos el comportamiento default
+            e.preventDefault();
+            history.pushState(null, '', `#${targetId}`);
+            corregirScrollHaciaSeccion(target);
+        });
     }
 
     // 1. LÓGICA DEL BOTÓN SCROLL TOP
@@ -202,11 +228,30 @@ function abrirComercio(index) {
     document.getElementById('comercio-nombre').textContent = c.nombre || '';
     document.getElementById('comercio-categoria').textContent = c.categoria || '';
 
-    // Redes: WhatsApp e Instagram son opcionales, cada uno se muestra
-    // solo si el comercio tiene ese dato cargado desde el admin.
+    // Ubicación: opcional, se muestra como texto debajo de la categoría.
+    const ubicacionWrap = document.getElementById('comercio-ubicacion');
+    const ubicacion = (c.ubicacion || '').trim();
+    if (ubicacion) {
+        document.getElementById('comercio-ubicacion-texto').textContent = ubicacion;
+        ubicacionWrap.classList.remove('hidden');
+    } else {
+        ubicacionWrap.classList.add('hidden');
+    }
+
+    // Redes: WhatsApp, Instagram y el botón "Cómo llegar" son opcionales,
+    // cada uno se muestra solo si el comercio tiene ese dato cargado desde
+    // el admin.
     const redesWrap = document.getElementById('comercio-redes');
     const btnWhatsapp = document.getElementById('comercio-whatsapp');
     const btnInstagram = document.getElementById('comercio-instagram');
+    const btnMapa = document.getElementById('comercio-mapa');
+
+    if (ubicacion) {
+        btnMapa.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ubicacion)}`;
+        btnMapa.classList.remove('hidden');
+    } else {
+        btnMapa.classList.add('hidden');
+    }
 
     const whatsapp = (c.whatsapp || '').trim();
     if (whatsapp) {
@@ -234,7 +279,7 @@ function abrirComercio(index) {
         btnInstagram.classList.add('hidden');
     }
 
-    redesWrap.classList.toggle('hidden', !whatsapp && !instagram);
+    redesWrap.classList.toggle('hidden', !whatsapp && !instagram && !ubicacion);
 
     const descuentoWrap = document.getElementById('comercio-descuento-wrap');
     const descuentoTexto = document.getElementById('comercio-descuento');
@@ -257,6 +302,23 @@ function cerrarComercio() {
         modal.classList.remove('flex');
         document.body.style.overflow = 'auto';
     }
+}
+
+// 7.55 "VER MÁS TESTIMONIOS"
+// site-data.js solo pinta los primeros testimonios y deja el resto en
+// window.__testimoniosRestantes (como HTML ya armado) para no hacer la
+// página larguísima con los 35 testimonios de entrada. Este botón agrega
+// el resto al final del grid existente y se oculta.
+function mostrarMasTestimonios() {
+    const container = document.getElementById('testimonios-container');
+    const btn = document.getElementById('btn-mas-testimonios');
+    const restantes = window.__testimoniosRestantes || [];
+
+    if (container && restantes.length) {
+        container.insertAdjacentHTML('beforeend', restantes.join(''));
+    }
+    if (btn) btn.classList.add('hidden');
+    window.__testimoniosRestantes = [];
 }
 
 // 7.6 MODAL DE DETALLE DE EMPRENDEDOR (logo, categoría, instagram, whatsapp y web)
