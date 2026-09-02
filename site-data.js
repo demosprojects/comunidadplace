@@ -288,16 +288,24 @@ function escucharEmprendedores() {
 
         window.iniciarCarruselInfinito();
 
-        // "Lo que dicen nuestros emprendedores": solo los que cargaron un testimonio
+        // "Lo que dicen nuestros emprendedores": solo los que cargaron un testimonio.
+        // Con 35+ testimonios el bloque hacía la página kilométrica, así que
+        // mostramos solo los primeros LIMITE_INICIAL y el resto queda guardado
+        // en window.__testimoniosRestantes para desplegarse con el botón
+        // "Ver más testimonios" (mostrarMasTestimonios(), en app.js).
         if (testimoniosContainer) {
             const conTestimonio = snap.docs.filter(doc => (doc.data().testimonio || '').trim().length > 0);
+            const btnMasTestimonios = document.getElementById('btn-mas-testimonios');
+            const LIMITE_INICIAL_TESTIMONIOS = 6;
 
             if (!conTestimonio.length) {
                 testimoniosContainer.innerHTML = '';
                 if (testimoniosVacio) testimoniosVacio.classList.remove('hidden');
+                if (btnMasTestimonios) btnMasTestimonios.classList.add('hidden');
             } else {
                 if (testimoniosVacio) testimoniosVacio.classList.add('hidden');
-                testimoniosContainer.innerHTML = conTestimonio.map(doc => {
+
+                const tarjetasHtml = conTestimonio.map(doc => {
                     const e = doc.data();
                     return `
                         <div class="bg-slate-50 p-8 rounded-[2rem] shadow-sm relative italic text-slate-600">
@@ -311,7 +319,19 @@ function escucharEmprendedores() {
                                 </div>
                             </div>
                         </div>`;
-                }).join('');
+                });
+
+                testimoniosContainer.innerHTML = tarjetasHtml.slice(0, LIMITE_INICIAL_TESTIMONIOS).join('');
+                window.__testimoniosRestantes = tarjetasHtml.slice(LIMITE_INICIAL_TESTIMONIOS);
+
+                if (btnMasTestimonios) {
+                    if (window.__testimoniosRestantes.length) {
+                        btnMasTestimonios.classList.remove('hidden');
+                        btnMasTestimonios.querySelector('span').textContent = `Ver más testimonios (${window.__testimoniosRestantes.length})`;
+                    } else {
+                        btnMasTestimonios.classList.add('hidden');
+                    }
+                }
             }
         }
     }, err => {
