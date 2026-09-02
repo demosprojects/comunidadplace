@@ -514,14 +514,14 @@
     </script>
 
     <nav id="site-header" class="bg-[#0b0c10] text-white fixed top-0 left-0 right-0 z-50 border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-        <div class="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap md:flex-nowrap items-center gap-x-4 sm:gap-x-6 gap-y-3 justify-between">
+        <div class="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex flex-wrap md:flex-nowrap items-center gap-x-4 sm:gap-x-6 gap-y-3 justify-between max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:gap-x-3 max-md:[grid-template-areas:'logo_carrito'_'buscador_buscador']">
 
-            <div class="order-1 flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                <div class="flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none group" onclick="window.location.reload()">
+            <div class="order-1 flex items-center gap-1.5 sm:gap-2 flex-shrink-0 max-md:[grid-area:logo] max-md:min-w-0">
+                <div class="flex items-center gap-2 sm:gap-2.5 cursor-pointer select-none group max-md:min-w-0" onclick="window.location.reload()">
                     <img src="https://res.cloudinary.com/dloroyhev/image/upload/v1786766537/jbsomfdmmovs2soin72l.webp" alt="Comunidad Emprendedora tu mercado virtual" class="w-8 h-8 sm:w-10 sm:h-10 object-contain flex-shrink-0 group-hover:-rotate-6 group-active:scale-90 transition-transform duration-300">
-                    <div class="leading-none group-hover:opacity-80 transition-opacity">
-                       <span class="block text-[10px] sm:text-[11px] font-black tracking-[0.25em] text-yellow-400 uppercase whitespace-nowrap">Comunidad Emprendedora</span>
-<span class="block text-sm sm:text-base font-900 tracking-wide uppercase -mt-0.5">Tu mercado virtual</span>
+                    <div class="leading-none group-hover:opacity-80 transition-opacity max-md:min-w-0">
+                       <span class="block text-[10px] sm:text-[11px] font-black tracking-[0.25em] text-yellow-400 uppercase whitespace-nowrap max-md:tracking-[0.12em] max-md:truncate">Comunidad Emprendedora</span>
+<span class="block text-sm sm:text-base font-900 tracking-wide uppercase -mt-0.5 max-md:truncate">Tu mercado virtual</span>
                     </div>
                 </div>
 
@@ -530,7 +530,7 @@
                 </div>
             </div>
 
-            <div class="order-3 md:order-2 w-full md:w-auto md:flex-1 md:max-w-xl flex gap-2.5 items-center">
+            <div class="order-3 md:order-2 w-full md:w-auto md:flex-1 md:max-w-xl flex gap-2.5 items-center max-md:[grid-area:buscador] max-md:w-full">
                 <div class="relative flex-1 group">
                     <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 group-focus-within:text-yellow-400 transition-colors pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
@@ -550,7 +550,7 @@
                 </div>
             </div>
 
-            <div class="order-2 md:order-3 flex items-center gap-1 font-bold text-xs uppercase tracking-widest flex-shrink-0">
+            <div class="order-2 md:order-3 flex items-center gap-1 font-bold text-xs uppercase tracking-widest flex-shrink-0 max-md:[grid-area:carrito]">
                 <button onclick="abrirCarrito()" class="flex items-center gap-1.5 px-3 py-2 rounded-full hover:bg-white/10 hover:text-yellow-400 transition-all active:scale-95">
                     <span class="relative inline-flex flex-shrink-0">
                         <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
@@ -1384,7 +1384,7 @@
             type="button"
             aria-label="Volver arriba"
             onclick="window.scrollTo({top:0, behavior:'smooth'})"
-            class="fixed bottom-5 right-4 sm:right-6 z-[95] w-12 h-12 rounded-full bg-black text-yellow-400 shadow-2xl flex items-center justify-center opacity-0 pointer-events-none translate-y-3 transition-all duration-300 hover:bg-yellow-400 hover:text-black active:scale-95">
+            class="fixed bottom-5 right-4 sm:right-6 z-[55] w-12 h-12 rounded-full bg-black text-yellow-400 shadow-2xl flex items-center justify-center opacity-0 pointer-events-none translate-y-3 transition-all duration-300 hover:bg-yellow-400 hover:text-black active:scale-95">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
         </svg>
