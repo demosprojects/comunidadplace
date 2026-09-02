@@ -455,6 +455,9 @@
             </div>
         </div>
         <p id="testimonios-empty" class="text-slate-400 text-sm italic hidden">Todavía no hay testimonios cargados.</p>
+        <button id="btn-mas-testimonios" onclick="mostrarMasTestimonios()" class="hidden mt-10 inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm px-6 py-3 rounded-full transition">
+            <span>Ver más testimonios</span> <i class="fas fa-chevron-down text-xs"></i>
+        </button>
     </div>
 </section>
 
@@ -627,12 +630,19 @@
         <h3 id="comercio-nombre" class="text-xl md:text-2xl font-black mb-1"></h3>
         <span id="comercio-categoria" class="text-xs uppercase tracking-widest text-slate-400 font-bold"></span>
 
+        <p id="comercio-ubicacion" class="hidden text-sm text-slate-500 font-semibold mt-2 flex items-center justify-center gap-1.5">
+            <i class="fas fa-location-dot text-slate-400"></i> <span id="comercio-ubicacion-texto"></span>
+        </p>
+
         <div id="comercio-redes" class="flex items-center justify-center gap-3 mt-5 hidden">
             <a id="comercio-whatsapp" href="#" target="_blank" rel="noopener" class="hidden w-11 h-11 rounded-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center shadow-md transition">
                 <i class="fab fa-whatsapp text-lg"></i>
             </a>
             <a id="comercio-instagram" href="#" target="_blank" rel="noopener" class="hidden w-11 h-11 rounded-full text-white flex items-center justify-center shadow-md transition hover:opacity-90" style="background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);">
                 <i class="fab fa-instagram text-lg"></i>
+            </a>
+            <a id="comercio-mapa" href="#" target="_blank" rel="noopener" class="hidden w-11 h-11 rounded-full bg-slate-800 hover:bg-slate-900 text-white flex items-center justify-center shadow-md transition">
+                <i class="fas fa-location-dot text-lg"></i>
             </a>
         </div>
 
