@@ -3,6 +3,13 @@ let categoriasDB = [];
 let emprendedoresCache = {}; // id -> datos del emprendedor, se llena en cargarEmprendedoresFila()
 let emprendedoresLista = []; // lista activa para el directorio "Ver todos"
 let productosNuevosPendientes = []; // productos que llegaron por INSERT y todavía no se incorporaron a la grilla: [{id, emprendedor_nombre}]
+
+// Paginación incremental ("Ver más") del catálogo público: en vez de
+// renderizar TODOS los productos filtrados de una, se muestra un lote
+// inicial y se va agrandando a medida que el usuario pide más. Evita una
+// página larguísima con cientos de cards cargadas (e imágenes) de entrada.
+const CP_LOTE_PRODUCTOS = 24;
+let cantidadVisibleProductos = CP_LOTE_PRODUCTOS;
 let visitorId = null;
 let productoModalActual = null;
 let variantesModalActual = [];
@@ -85,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Borraron todo el texto: el catálogo vuelve a mostrarse
             // completo (respetando los otros filtros que sigan activos).
             cerrarSugerenciasBusqueda();
+            cantidadVisibleProductos = CP_LOTE_PRODUCTOS;
             aplicarFiltros();
             return;
         }
@@ -258,6 +266,7 @@ function seleccionarCategoriaFiltro(btnSeleccionado, id, nombre) {
     btnSeleccionado.querySelector('.check').classList.remove('hidden');
     cerrarFiltroPanel('categoria');
     actualizarBotonLimpiarFiltros();
+    cantidadVisibleProductos = CP_LOTE_PRODUCTOS;
     aplicarFiltros();
 }
 
@@ -273,6 +282,7 @@ function seleccionarEmprendedorFiltro(btnSeleccionado, id, nombre) {
     btnSeleccionado.querySelector('.check').classList.remove('hidden');
     cerrarFiltroPanel('emprendedor');
     actualizarBotonLimpiarFiltros();
+    cantidadVisibleProductos = CP_LOTE_PRODUCTOS;
     aplicarFiltros();
 }
 
@@ -287,6 +297,7 @@ function seleccionarOrdenFiltro(btnSeleccionado, valor, nombre) {
     btnSeleccionado.classList.add('bg-black', 'text-white');
     btnSeleccionado.querySelector('.check').classList.remove('hidden');
     cerrarFiltroPanel('orden');
+    cantidadVisibleProductos = CP_LOTE_PRODUCTOS;
     aplicarFiltros();
 }
 
@@ -1167,6 +1178,7 @@ function limpiarFiltros() {
         b.querySelector('.check').classList.toggle('hidden', !esRecientes);
     });
     actualizarBotonLimpiarFiltros();
+    cantidadVisibleProductos = CP_LOTE_PRODUCTOS;
     aplicarFiltros();
 }
 
@@ -1221,7 +1233,34 @@ function aplicarFiltros() {
         filtrados.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
 
-    mostrarProductos(filtrados);
+    mostrarProductos(filtrados.slice(0, cantidadVisibleProductos));
+    actualizarBotonVerMas(filtrados.length);
+}
+
+// Muestra/oculta y actualiza el texto del botón "Ver más productos"
+// según cuántos productos filtrados quedan sin renderizar todavía.
+function actualizarBotonVerMas(totalFiltrados) {
+    const wrap = document.getElementById('cp-ver-mas-wrap');
+    const contador = document.getElementById('cp-ver-mas-contador');
+    if (!wrap) return;
+
+    if (totalFiltrados > cantidadVisibleProductos) {
+        wrap.classList.remove('hidden');
+        wrap.classList.add('flex');
+        const mostrados = Math.min(cantidadVisibleProductos, totalFiltrados);
+        if (contador) contador.textContent = `Mostrando ${mostrados} de ${totalFiltrados} productos`;
+    } else {
+        wrap.classList.add('hidden');
+        wrap.classList.remove('flex');
+    }
+}
+
+// Agranda el lote visible y vuelve a aplicar los filtros actuales (sin
+// resetear la cantidad visible, a diferencia de cuando cambian los
+// filtros/búsqueda/orden).
+function verMasProductos() {
+    cantidadVisibleProductos += CP_LOTE_PRODUCTOS;
+    aplicarFiltros();
 }
 
 // ============================================================
@@ -1241,6 +1280,7 @@ function limpiarBusqueda() {
     input.value = '';
     actualizarBotonLimpiarBusqueda();
     cerrarSugerenciasBusqueda();
+    cantidadVisibleProductos = CP_LOTE_PRODUCTOS;
     aplicarFiltros();
     input.focus();
 }
@@ -1338,6 +1378,7 @@ function irADetalleDesdeBusqueda(id) {
 
 function verTodosResultadosBusqueda() {
     cerrarSugerenciasBusqueda();
+    cantidadVisibleProductos = CP_LOTE_PRODUCTOS;
     aplicarFiltros(); // recién acá el catálogo se filtra por el texto buscado
     const destino = document.getElementById('contenedor-productos');
     if (destino) destino.scrollIntoView({ behavior: 'smooth', block: 'start' });
