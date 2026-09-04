@@ -877,6 +877,16 @@
             </div>
         </div>
 
+        <!-- Boton "Ver mas" para paginacion incremental del catalogo (ver
+             verMasProductos() en main.js). Se muestra/oculta desde JS segun
+             si quedan productos filtrados sin renderizar todavia. -->
+        <div id="cp-ver-mas-wrap" class="hidden flex-col items-center gap-2 mt-8">
+            <p id="cp-ver-mas-contador" class="text-xs font-semibold text-gray-400"></p>
+            <button onclick="verMasProductos()" id="btn-ver-mas-productos" class="border-2 border-black px-8 py-3 rounded-full font-black uppercase text-xs tracking-widest hover:bg-black hover:text-white transition-all active:scale-95">
+                Ver mas productos
+            </button>
+        </div>
+
         <div id="ver-todos-productos-wrap" class="hidden mt-8 sm:mt-12 flex justify-center">
             <button type="button" id="btn-ver-todos-productos" onclick="mostrarCatalogoCompleto()" class="inline-flex items-center gap-2 bg-black text-white px-7 py-3.5 rounded-full font-black uppercase text-xs tracking-widest hover:bg-yellow-400 hover:text-black transition-all active:scale-95 shadow-xl">
                 Ver todos los productos
